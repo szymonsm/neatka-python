@@ -6,7 +6,7 @@ import os
 import pickle
 
 import neat
-from neat.kan_network import KANNetwork
+from neat.nn.kan import KANNetwork
 from neat.kan_genome import KANGenome
 from cart_pole import CartPole, discrete_actuator_force
 from movie import make_movie
@@ -51,6 +51,14 @@ while sim.t < 120.0:
 
     balance_time = sim.t
 
-print('Simulation ended after {0:.1f} seconds'.format(balance_time))
+print('Pole balanced for {0:.1f} of 120.0 seconds'.format(balance_time))
+
+print()
+print("Final conditions:")
+print("        x = {0:.4f}".format(sim.x))
+print("    x_dot = {0:.4f}".format(sim.dx))
+print("    theta = {0:.4f}".format(sim.theta))
+print("theta_dot = {0:.4f}".format(sim.dtheta))
+print()
 
 make_movie(net, discrete_actuator_force, 15.0, "kan-movie.mp4")
