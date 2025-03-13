@@ -3,6 +3,7 @@
 import os
 import warnings
 from configparser import ConfigParser
+# from neat.genome import KANGenomeConfig
 
 
 class ConfigParameter(object):
@@ -87,6 +88,26 @@ def write_pretty_params(f, config, params):
         p = params[name]
         f.write(f'{p.name.ljust(longest_name)} = {p.format(getattr(config, p.name))}\n')
 
+def write_pretty_params(f, config, params):
+    """Write the parameters to a text file in a readable format."""
+    param_names = [p.name for p in params]
+    param_names.sort()
+    longest_name = max(len(name) for name in param_names)
+    for name in param_names:
+        p = next(p for p in params if p.name == name)
+        f.write('{} = {}\n'.format(name.ljust(longest_name), p.format_value(getattr(config, name))))
+
+def load_kan_genome_config(filename):
+    """Load a KANGenome configuration from a text file."""
+    from neat.kan_genome import KANGenomeConfig  # Import here to avoid circular dependency
+    
+    config = ConfigParser()
+    config.read(filename)
+    
+    # Create a new KANGenomeConfig
+    kan_genome_config = KANGenomeConfig(config['KANGenome'])
+    
+    return kan_genome_config
 
 class UnknownConfigItemError(NameError):
     """Error for unknown configuration option - partially to catch typos."""

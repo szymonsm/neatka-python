@@ -176,3 +176,41 @@ def draw_net(config, genome, view=False, filename=None, node_names=None, show_di
     dot.render(filename, view=view)
 
     return dot
+
+def draw_kan_net(config, genome, view=False, filename=None, node_names=None, show_disabled=True, prune_unused=False,
+                node_colors=None, fmt='svg'):
+    """Receives a KANGenome and draws a neural network with arbitrary topology."""
+    # Use the existing draw_net function as a starting point
+    dot = draw_net(config, genome, view=False, filename=None, node_names=node_names, 
+                  show_disabled=show_disabled, prune_unused=prune_unused, 
+                  node_colors=node_colors, fmt=fmt)
+    
+    # Add KAN-specific visualizations (spline indicators)
+    for cg in genome.connections.values():
+        if cg.enabled or show_disabled:
+            input, output = cg.key
+            
+            # Get node names
+            a = node_names.get(input, str(input))
+            b = node_names.get(output, str(output))
+            
+            # Add a small label showing number of spline segments
+            n_segments = len(cg.spline_segments)
+            if n_segments > 0:
+                # Create intermediate node to represent the spline
+                spline_node = f"{input}_{output}_spline"
+                dot.node(spline_node, label=f"KAN\n{n_segments}", _attributes={'style': 'filled', 'shape': 'box', 'fillcolor': 'yellow', 'fontsize': '7'})
+                
+                # Connect input to spline and spline to output
+                dot.edge(a, spline_node, _attributes={'style': 'solid'})
+                
+                # Style based on weight
+                style = 'solid' if cg.enabled else 'dotted'
+                color = 'green' if cg.weight > 0 else 'red'
+                width = str(0.1 + abs(cg.weight / 5.0))
+                dot.edge(spline_node, b, _attributes={'style': style, 'color': color, 'penwidth': width})
+    
+    if filename is not None:
+        dot.render(filename, view=view)
+    
+    return dot

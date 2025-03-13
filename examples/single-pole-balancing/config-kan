@@ -1,0 +1,106 @@
+# NEAT configuration for the single-pole balancing experiment using KANs.
+
+[NEAT]
+fitness_criterion     = max
+fitness_threshold     = 60.0
+pop_size              = 250
+reset_on_extinction   = 0
+
+[KANGenome]
+# Network parameters
+num_inputs            = 4
+num_hidden            = 1
+num_outputs           = 1
+initial_connection    = partial_direct 0.5
+feed_forward          = True
+
+# Compatibility parameters
+compatibility_disjoint_coefficient = 1.0
+compatibility_weight_coefficient   = 0.6
+
+# Connection parameters
+conn_add_prob         = 0.2
+conn_delete_prob      = 0.2
+
+# Node parameters
+node_add_prob         = 0.2
+node_delete_prob      = 0.2
+
+# Connection enable parameters - THESE WERE MISSING
+enabled_default         = True
+enabled_mutate_rate     = 0.01
+enabled_rate_to_true_add  = 0.0
+enabled_rate_to_false_add = 0.0
+
+# Structural mutation parameters - MAY BE NEEDED
+single_structural_mutation = False
+structural_mutation_surer  = default
+
+# Activation and aggregation
+activation_default      = identity
+activation_options      = identity
+activation_mutate_rate  = 0.0
+aggregation_default     = sum
+aggregation_options     = sum
+aggregation_mutate_rate = 0.0
+
+# Standard connection parameters
+weight_init_mean        = 0.0
+weight_init_stdev       = 1.0
+weight_max_value        = 30
+weight_min_value        = -30
+weight_mutate_rate      = 0.8
+weight_mutate_power     = 0.5
+weight_replace_rate     = 0.1
+
+# Node bias parameters
+bias_init_mean          = 0.0
+bias_init_stdev         = 1.0
+bias_max_value          = 30.0
+bias_min_value          = -30.0
+bias_mutate_power       = 0.5
+bias_mutate_rate        = 0.7
+bias_replace_rate       = 0.1
+
+# Node response parameters
+response_init_mean      = 1.0
+response_init_stdev     = 0.0
+response_max_value      = 30.0
+response_min_value      = -30.0
+response_mutate_power   = 0.0
+response_mutate_rate    = 0.0
+response_replace_rate   = 0.0
+
+# KAN-specific parameters - RENAMED to avoid conflicts
+scale_coefficient_range = 5.0
+bias_coefficient_range  = 5.0
+spline_coefficient_range = 5.0
+scale_mutation_rate     = 0.1
+scale_mutation_power    = 0.5
+scale_min_value         = -5.0
+scale_max_value         = 5.0
+kan_bias_mutation_rate  = 0.1
+kan_bias_mutation_power = 0.5
+kan_bias_min_value      = -5.0
+kan_bias_max_value      = 5.0
+spline_mutation_rate    = 0.2
+spline_mutation_power   = 0.5
+spline_min_value        = -5.0
+spline_max_value        = 5.0
+spline_add_prob         = 0.1
+spline_delete_prob      = 0.05
+initial_spline_segments = 3
+max_spline_segments     = 10
+spline_range_min        = -1.0
+spline_range_max        = 1.0
+
+[DefaultSpeciesSet]
+compatibility_threshold = 3.0
+
+[DefaultStagnation]
+species_fitness_func = max
+max_stagnation  = 20
+
+[DefaultReproduction]
+elitism            = 2
+survival_threshold = 0.2

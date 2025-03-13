@@ -7,6 +7,7 @@ import neat.distributed as distributed
 from neat.config import Config
 from neat.population import Population, CompleteExtinctionException
 from neat.genome import DefaultGenome
+from neat.kan_genome import KANGenome, KANGenomeConfig
 from neat.reproduction import DefaultReproduction
 from neat.stagnation import DefaultStagnation
 from neat.reporting import StdOutReporter

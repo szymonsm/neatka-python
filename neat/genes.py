@@ -121,3 +121,129 @@ class DefaultConnectionGene(BaseGene):
         if self.enabled != other.enabled:
             d += 1.0
         return d * config.compatibility_weight_coefficient
+    
+import numpy as np
+from random import random, choice, gauss, uniform
+# from neat.genes import BaseGene, DefaultNodeGene, DefaultConnectionGene
+from neat.attributes import FloatAttribute, BoolAttribute, StringAttribute
+
+class KANNodeGene(DefaultNodeGene):
+    """Node gene for Kolmogorov-Arnold Networks.
+    
+    Represents a summation node in the KAN architecture.
+    """
+    def __init__(self, key):
+        super().__init__(key)
+        self.aggregation = 'sum'  # KAN nodes are summation nodes by default
+
+class SplineSegmentGene(BaseGene):
+    """Represents a single point in a spline grid."""
+    _gene_attributes = [
+        FloatAttribute('value'),
+        FloatAttribute('grid_position'),
+    ]
+    
+    def __init__(self, key, value=0.0, grid_position=0.0):
+        super().__init__(key)
+        self.value = value
+        self.grid_position = grid_position
+        
+    def distance(self, other, config):
+        return abs(self.value - other.value) / config.spline_coefficient_range
+
+class KANConnectionGene(DefaultConnectionGene):
+    """Connection gene for Kolmogorov-Arnold Networks.
+    
+    Represents a spline-based connection between nodes.
+    """
+    _gene_attributes = [
+        FloatAttribute('weight'),
+        BoolAttribute('enabled'),
+        FloatAttribute('scale'),
+        FloatAttribute('bias'),
+    ]
+    
+    def __init__(self, key, weight=0.0, enabled=True, scale=1.0, bias=0.0):
+        super().__init__(key, weight, enabled)
+        self.scale = scale
+        self.bias = bias
+        self.spline_segments = {}  # Dictionary mapping grid positions to spline segment genes
+        
+    def mutate(self, config):
+        super().mutate(config)
+        
+        # Mutate scale
+        if random() < config.scale_mutation_rate:
+            self.scale += gauss(0, config.scale_mutation_power)
+            self.scale = max(min(self.scale, config.scale_max_value), config.scale_min_value)
+            
+        # Mutate bias
+        if random() < config.kan_bias_mutation_rate:
+            self.bias += gauss(0, config.kan_bias_mutation_power)
+            self.bias = max(min(self.bias, config.kan_bias_max_value), config.kan_bias_min_value)
+        
+        # Mutate spline segments
+        for key, segment in self.spline_segments.items():
+            if random() < config.spline_mutation_rate:
+                segment.value += gauss(0, config.spline_mutation_power)
+                segment.value = max(min(segment.value, config.spline_max_value), config.spline_min_value)
+                
+    def add_spline_segment(self, key, grid_position, value=None):
+        """Add a new spline segment to this connection."""
+        if value is None:
+            value = uniform(-1.0, 1.0)
+        self.spline_segments[key] = SplineSegmentGene(key, value, grid_position)
+        
+    def get_spline_function(self):
+        """Return a callable spline function based on the spline segments."""
+        # Sort grid points by position
+        points = sorted([(seg.grid_position, seg.value) for seg in self.spline_segments.values()])
+        
+        # Simple linear interpolation between points
+        def spline_func(x):
+            # Special cases
+            if len(points) == 0:
+                return 0.0
+            if len(points) == 1:
+                return points[0][1]
+                
+            # Find position in the grid
+            if x <= points[0][0]:
+                return points[0][1]
+            if x >= points[-1][0]:
+                return points[-1][1]
+                
+            # Linear interpolation between points
+            for i in range(len(points)-1):
+                x1, y1 = points[i]
+                x2, y2 = points[i+1]
+                
+                if x1 <= x <= x2:
+                    # Linear interpolation: y = y1 + (y2-y1)*(x-x1)/(x2-x1)
+                    t = (x - x1) / (x2 - x1) if x2 != x1 else 0
+                    return y1 + t * (y2 - y1)
+            
+            # Should never reach here
+            return 0.0
+            
+    def distance(self, other, config):
+        """Return the genetic distance between this connection gene and the other."""
+        d = super().distance(other, config)
+        
+        # Add distance for scale and bias
+        d += abs(self.scale - other.scale) / config.scale_coefficient_range
+        d += abs(self.bias - other.bias) / config.bias_coefficient_range
+        
+        # Add distance for spline segments (if they share grid positions)
+        spline_dist = 0.0
+        count = 0
+        for pos in set(self.spline_segments.keys()) & set(other.spline_segments.keys()):
+            seg1 = self.spline_segments[pos]
+            seg2 = other.spline_segments[pos]
+            spline_dist += seg1.distance(seg2, config)
+            count += 1
+            
+        if count > 0:
+            d += spline_dist / count
+            
+        return d
