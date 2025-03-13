@@ -81,6 +81,8 @@ kan_bias_replace_rate   = 0.1
 spline_init_mean        = 0.0
 spline_init_stdev       = 0.1
 spline_replace_rate     = 0.1
+scale_mutate_rate       = 1.0
+scale_mutate_power      = 0.5
 
 # KAN-specific parameters
 scale_coefficient_range = 5.0
@@ -100,11 +102,11 @@ spline_min_value        = -5.0
 spline_max_value        = 5.0
 spline_add_prob         = 0.1
 spline_delete_prob      = 0.05
-initial_spline_segments = 3
+initial_spline_segments = 5
 min_spline_segments     = 2
 max_spline_segments     = 10
-spline_range_min        = -1.0
-spline_range_max        = 1.0
+spline_range_min        = -10.0
+spline_range_max        = 10.0
 grid_eps                = 0.02
 
 [DefaultSpeciesSet]

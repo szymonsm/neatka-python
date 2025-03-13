@@ -102,8 +102,16 @@ class KANConnectionGene(DefaultConnectionGene):
         # Delete a spline segment
         if (np.random.random() < config.spline_delete_prob and 
             len(self.spline_segments) > config.min_spline_segments):
-            to_delete = np.random.choice(list(self.spline_segments.keys()))
-            del self.spline_segments[to_delete]
+            # FIX: Instead of using np.random.choice on keys directly,
+            # convert keys to list first and then use Python's random.choice
+            # or select a random index
+            keys_list = list(self.spline_segments.keys())
+            if keys_list:  # Make sure there are keys to delete
+                # Get a random index
+                idx = np.random.randint(0, len(keys_list))
+                # Use the index to get the key to delete
+                to_delete = keys_list[idx]
+                del self.spline_segments[to_delete]
                 
     def add_spline_segment(self, key, grid_position, value=None):
         """Add a new spline segment to this connection."""
@@ -395,63 +403,14 @@ class KANGenome(DefaultGenome):
             conn.add_spline_segment(seg_key, grid_pos, value)
     
     def mutate(self, config):
-        """Mutate this connection gene's attributes."""
-        # Standard weight mutation
-        if np.random.random() < config.weight_mutate_rate:
-            if np.random.random() < config.weight_replace_rate:
-                self.weight = gauss(0, config.weight_init_stdev)
-            else:
-                self.weight += gauss(0, config.weight_mutate_power)
-                self.weight = max(min(self.weight, config.weight_max_value), 
-                                config.weight_min_value)
-                
-        # Enable/disable mutation
-        if np.random.random() < config.enabled_mutate_rate:
-            self.enabled = not self.enabled
-            
-        # KAN-specific mutations - with replacement option
-        if hasattr(config, 'scale_mutation_rate') and np.random.random() < config.scale_mutation_rate:
-            if hasattr(config, 'scale_replace_rate') and np.random.random() < config.scale_replace_rate:
-                # Complete replacement
-                self.scale = gauss(config.scale_init_mean, config.scale_init_stdev)
-            else:
-                # Small mutation
-                self.scale += gauss(0, config.scale_mutation_power)
-                self.scale = max(min(self.scale, config.scale_max_value), config.scale_min_value)
-            
-        if hasattr(config, 'kan_bias_mutation_rate') and np.random.random() < config.kan_bias_mutation_rate:
-            if hasattr(config, 'kan_bias_replace_rate') and np.random.random() < config.kan_bias_replace_rate:
-                # Complete replacement
-                self.bias = gauss(config.kan_bias_init_mean, config.kan_bias_init_stdev)
-            else:
-                # Small mutation
-                self.bias += gauss(0, config.kan_bias_mutation_power)
-                self.bias = max(min(self.bias, config.kan_bias_max_value), config.kan_bias_min_value)
+        """Mutate this genome."""
+        # Call the parent class's mutate method to handle standard NEAT mutations
+        # (This already includes calling mutate() on each connection gene)
+        super().mutate(config)
         
-        # Mutate spline segments
-        for segment in list(self.spline_segments.values()):
-            if np.random.random() < config.spline_mutation_rate:
-                if hasattr(config, 'spline_replace_rate') and np.random.random() < config.spline_replace_rate:
-                    # Complete replacement
-                    segment.value = gauss(config.spline_init_mean, config.spline_init_stdev)
-                else:
-                    # Small mutation
-                    segment.value += gauss(0, config.spline_mutation_power)
-                    segment.value = max(min(segment.value, config.spline_max_value), 
-                                    config.spline_min_value)
-            
-        # Add new spline segment
-        if (hasattr(config, 'spline_add_prob') and 
-            np.random.random() < config.spline_add_prob and 
-            len(self.spline_segments) < config.max_spline_segments):
-            self._add_random_spline_segment(config)
-            
-        # Delete a spline segment
-        if (hasattr(config, 'spline_delete_prob') and 
-            np.random.random() < config.spline_delete_prob and 
-            len(self.spline_segments) > getattr(config, 'min_spline_segments', 2)):
-            to_delete = choice(list(self.spline_segments.keys()))
-            del self.spline_segments[to_delete]
+        # No need to mutate spline_segments here - that's done in KANConnectionGene.mutate()
+        # The rest of the code that was here is trying to access connection-specific attributes
+        # and should only be in the connection gene's mutate method, not the genome's
     
     def distance(self, other, config):
         """Return the genetic distance between this genome and the other."""
