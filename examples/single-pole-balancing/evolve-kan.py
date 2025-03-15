@@ -11,6 +11,7 @@ import neat
 from neat.nn.kan import KANNetwork
 from neat.kan_genome import KANGenome
 import visualize
+import visualize_kan
 
 runs_per_net = 5
 simulation_seconds = 60.0
@@ -78,12 +79,19 @@ def run():
     visualize.plot_species(stats, view=True, filename="kan-speciation.svg")
 
     node_names = {-1: 'x', -2: 'dx', -3: 'theta', -4: 'dtheta', 0: 'control'}
-    visualize.draw_net(config, winner, True, node_names=node_names)
-
-    visualize.draw_net(config, winner, view=True, node_names=node_names,
-                       filename="winner-kan.gv")
-    visualize.draw_net(config, winner, view=True, node_names=node_names,
-                       filename="winner-kan-pruned.gv", prune_unused=True)
+    
+    # Use KAN-specific visualization functions
+    visualize.draw_kan_net(config, winner, view=True, node_names=node_names,
+                        filename="winner-kan.gv")
+    visualize.draw_kan_net(config, winner, view=True, node_names=node_names,
+                        filename="winner-kan-pruned.gv", prune_unused=True)
+    
+    # Plot spline visualizations
+    visualize_kan.plot_kan_splines(winner, config.genome_config, 
+                                  filename="winner-kan-splines.png", view=True)
+    
+    # Print detailed analysis of the genome
+    visualize_kan.analyze_kan_genome(winner, config.genome_config)
 
 if __name__ == '__main__':
     run()
