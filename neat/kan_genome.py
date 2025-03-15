@@ -1,4 +1,4 @@
-import torch
+# import torch
 import random
 import numpy as np
 from neat.genome import DefaultGenome, DefaultGenomeConfig
@@ -113,7 +113,6 @@ class KANConnectionGene(DefaultConnectionGene):
         # Delete a spline segment with some probability
         if (random.random() < config.spline_delete_prob and 
             len(self.spline_segments) > config.min_spline_segments):
-            
             # Don't delete all segments - keep at least the minimum required
             keys_list = list(self.spline_segments.keys())
             if keys_list:
@@ -424,14 +423,14 @@ class KANGenome(DefaultGenome):
                                 conn.add_spline_segment(seg_key, pos, seg2.value)
                     elif seg1:
                         # Only first parent has this position
-                        if random.random() > 0.5:  # 50% chance to inherit
-                            seg_key = (conn.key[0], conn.key[1], pos)
-                            conn.add_spline_segment(seg_key, pos, seg1.value)
+                        # if random.random() > 0.5:  # 50% chance to inherit
+                        seg_key = (conn.key[0], conn.key[1], pos)
+                        conn.add_spline_segment(seg_key, pos, seg1.value)
                     elif seg2:
                         # Only second parent has this position
-                        if random.random() > 0.5:  # 50% chance to inherit
-                            seg_key = (conn.key[0], conn.key[1], pos)
-                            conn.add_spline_segment(seg_key, pos, seg2.value)
+                        # if random.random() > 0.5:  # 50% chance to inherit
+                        seg_key = (conn.key[0], conn.key[1], pos)
+                        conn.add_spline_segment(seg_key, pos, seg2.value)
                 
             elif p1_conn:
                 # Only first parent has this connection
@@ -458,12 +457,100 @@ class KANGenome(DefaultGenome):
             else:  # New connection
                 # Initialize with default spline segments
                 self._initialize_connection_splines(conn, config)
+                
+            # IMPORTANT FIX: Ensure connection has at least min_spline_segments
+            if len(conn.spline_segments) < config.min_spline_segments:
+                # Add segments until we reach minimum
+                self._ensure_min_spline_segments(conn, config)
+                
+            # IMPORTANT FIX: Ensure connection doesn't exceed max_spline_segments
+            if len(conn.spline_segments) > config.max_spline_segments:
+                # Remove excess segments, keeping the ones with highest absolute values
+                self._reduce_to_max_spline_segments(conn, config)
+    
+    def _ensure_min_spline_segments(self, conn, config):
+        """Ensure a connection has at least min_spline_segments."""
+        # Add segments until we reach the minimum
+        while len(conn.spline_segments) < config.min_spline_segments:
+            # Get existing positions
+            existing_positions = sorted([seg.grid_position for seg in conn.spline_segments.values()])
+            
+            # Find a good position to add a new segment
+            new_pos = None
+            
+            if not existing_positions:
+                # No existing positions - add at midpoint
+                new_pos = (config.spline_range_min + config.spline_range_max) / 2
+            elif len(existing_positions) == 1:
+                # Just one position - add at opposite end
+                if existing_positions[0] < (config.spline_range_min + config.spline_range_max) / 2:
+                    new_pos = config.spline_range_max - 0.1
+                else:
+                    new_pos = config.spline_range_min + 0.1
+            else:
+                # Find largest gap and add in middle
+                largest_gap = 0
+                gap_pos = None
+                
+                # Check gaps between positions
+                for i in range(len(existing_positions) - 1):
+                    gap = existing_positions[i+1] - existing_positions[i]
+                    if gap > largest_gap:
+                        largest_gap = gap
+                        gap_pos = (existing_positions[i] + existing_positions[i+1]) / 2
+                
+                # Check gap at beginning
+                if existing_positions[0] - config.spline_range_min > largest_gap:
+                    largest_gap = existing_positions[0] - config.spline_range_min
+                    gap_pos = (config.spline_range_min + existing_positions[0]) / 2
+                    
+                # Check gap at end
+                if config.spline_range_max - existing_positions[-1] > largest_gap:
+                    largest_gap = config.spline_range_max - existing_positions[-1]
+                    gap_pos = (existing_positions[-1] + config.spline_range_max) / 2
+                
+                new_pos = gap_pos
+                
+            # Create and add the new segment if we found a valid position
+            if new_pos is not None:
+                seg_key = (conn.key[0], conn.key[1], new_pos)
+                value = random.gauss(config.spline_init_mean, config.spline_init_stdev)
+                conn.add_spline_segment(seg_key, new_pos, value)
+    
+    def _reduce_to_max_spline_segments(self, conn, config):
+        """Reduce spline segments to max_spline_segments, keeping most significant ones."""
+        if len(conn.spline_segments) <= config.max_spline_segments:
+            return
+            
+        # Sort segments by absolute value (importance)
+        segments_by_importance = sorted(
+            conn.spline_segments.items(),
+            key=lambda item: abs(item[1].value), 
+            reverse=True
+        )
+        
+        # Keep only the most important segments
+        to_keep = segments_by_importance[:config.max_spline_segments]
+        
+        # Create a new dictionary with just these segments
+        new_segments = {key: seg for key, seg in to_keep}
+        conn.spline_segments = new_segments
     
     def mutate(self, config):
         """Mutate this genome."""
         # Call the parent class mutate method, which will also call mutate on all connections
         super().mutate(config)
-        # KANConnectionGene.mutate already handles spline mutations
+        
+        # Additional check after mutation to ensure segment count constraints are met
+        for conn in self.connections.values():
+            if conn.enabled:
+                # Ensure min segments
+                if len(conn.spline_segments) < config.min_spline_segments:
+                    self._ensure_min_spline_segments(conn, config)
+                
+                # Ensure max segments
+                if len(conn.spline_segments) > config.max_spline_segments:
+                    self._reduce_to_max_spline_segments(conn, config)
     
     def distance(self, other, config):
         """Return the genetic distance between this genome and the other."""

@@ -108,109 +108,161 @@ def plot_species(statistics, view=False, filename='speciation.svg'):
     plt.close()
 
 
-def draw_net(config, genome, view=False, filename=None, node_names=None, show_disabled=True, prune_unused=False,
-             node_colors=None, fmt='svg'):
-    """ Receives a genome and draws a neural network with arbitrary topology. """
-    # Attributes for network nodes.
-    if graphviz is None:
-        warnings.warn("This display is not available due to a missing optional dependency (graphviz)")
-        return
+# def draw_net(config, genome, view=False, filename=None, node_names=None, show_disabled=True, prune_unused=False,
+#              node_colors=None, fmt='svg'):
+#     """ Receives a genome and draws a neural network with arbitrary topology. """
+#     # Attributes for network nodes.
+#     if graphviz is None:
+#         warnings.warn("This display is not available due to a missing optional dependency (graphviz)")
+#         return
 
-    # If requested, use a copy of the genome which omits all components that won't affect the output.
+#     # If requested, use a copy of the genome which omits all components that won't affect the output.
+#     if prune_unused:
+#         if show_disabled:
+#             warnings.warn("show_disabled has no effect when prune_unused is True")
+
+#         genome = genome.get_pruned_copy(config.genome_config)
+
+#     if node_names is None:
+#         node_names = {}
+
+#     assert type(node_names) is dict
+
+#     if node_colors is None:
+#         node_colors = {}
+
+#     assert type(node_colors) is dict
+
+#     node_attrs = {
+#         'shape': 'circle',
+#         'fontsize': '9',
+#         'height': '0.2',
+#         'width': '0.2'}
+
+#     dot = graphviz.Digraph(format=fmt, node_attr=node_attrs)
+
+#     inputs = set()
+#     for k in config.genome_config.input_keys:
+#         inputs.add(k)
+#         name = node_names.get(k, str(k))
+#         input_attrs = {'style': 'filled', 'shape': 'box', 'fillcolor': node_colors.get(k, 'lightgray')}
+#         dot.node(name, _attributes=input_attrs)
+
+#     outputs = set()
+#     for k in config.genome_config.output_keys:
+#         outputs.add(k)
+#         name = node_names.get(k, str(k))
+#         node_attrs = {'style': 'filled', 'fillcolor': node_colors.get(k, 'lightblue')}
+
+#         dot.node(name, _attributes=node_attrs)
+
+#     for n in genome.nodes.keys():
+#         if n in inputs or n in outputs:
+#             continue
+
+#         attrs = {'style': 'filled', 'fillcolor': node_colors.get(n, 'white')}
+#         dot.node(str(n), _attributes=attrs)
+
+#     for cg in genome.connections.values():
+#         if cg.enabled or show_disabled:
+#             input, output = cg.key
+#             a = node_names.get(input, str(input))
+#             b = node_names.get(output, str(output))
+#             style = 'solid' if cg.enabled else 'dotted'
+#             color = 'green' if cg.weight > 0 else 'red'
+#             width = str(0.1 + abs(cg.weight / 5.0))
+#             dot.edge(a, b, _attributes={'style': style, 'color': color, 'penwidth': width})
+
+#     dot.render(filename, view=view)
+
+#     return dot
+
+# def draw_kan_net(config, genome, view=False, filename=None, node_names=None, show_disabled=True, prune_unused=False,
+#                 node_colors=None, fmt='svg'):
+#     """Receives a KANGenome and draws a neural network with arbitrary topology."""
+#     # Use the existing draw_net function as a starting point
+#     dot = draw_net(config, genome, view=False, filename=None, node_names=node_names, 
+#                   show_disabled=show_disabled, prune_unused=prune_unused, 
+#                   node_colors=node_colors, fmt=fmt)
+    
+#     # Add KAN-specific visualizations (spline indicators)
+#     for cg in genome.connections.values():
+#         if cg.enabled or show_disabled:
+#             input, output = cg.key
+            
+#             # Get node names
+#             a = node_names.get(input, str(input))
+#             b = node_names.get(output, str(output))
+            
+#             # Add a small label showing number of spline segments
+#             n_segments = len(cg.spline_segments)
+#             if n_segments > 0:
+#                 # Create intermediate node to represent the spline
+#                 spline_node = f"{input}_{output}_spline"
+#                 dot.node(spline_node, label=f"KAN\n{n_segments}", _attributes={'style': 'filled', 'shape': 'box', 'fillcolor': 'yellow', 'fontsize': '7'})
+                
+#                 # Connect input to spline and spline to output
+#                 dot.edge(a, spline_node, _attributes={'style': 'solid'})
+                
+#                 # Style based on weight
+#                 style = 'solid' if cg.enabled else 'dotted'
+#                 color = 'green' if cg.weight > 0 else 'red'
+#                 width = str(0.1 + abs(cg.weight / 5.0))
+#                 dot.edge(spline_node, b, _attributes={'style': style, 'color': color, 'penwidth': width})
+    
+#     if filename is not None:
+#         dot.render(filename, view=view)
+    
+#     return dot
+
+def draw_kan_net(config, genome, view=False, filename=None, node_names=None, show_disabled=True, prune_unused=False,
+                 node_colors=None, fmt='svg'):
+    """Draws a neural network with KAN-specific spline visualizations."""
+    if graphviz is None:
+        warnings.warn("Graphviz is not available.")
+        return
+    
     if prune_unused:
         if show_disabled:
             warnings.warn("show_disabled has no effect when prune_unused is True")
-
         genome = genome.get_pruned_copy(config.genome_config)
-
-    if node_names is None:
-        node_names = {}
-
-    assert type(node_names) is dict
-
-    if node_colors is None:
-        node_colors = {}
-
-    assert type(node_colors) is dict
-
+    
+    node_names = node_names or {}
+    node_colors = node_colors or {}
+    
     node_attrs = {
-        'shape': 'circle',
-        'fontsize': '9',
-        'height': '0.2',
-        'width': '0.2'}
-
+        'shape': 'circle', 'fontsize': '9', 'height': '0.2', 'width': '0.2'
+    }
     dot = graphviz.Digraph(format=fmt, node_attr=node_attrs)
-
-    inputs = set()
+    
+    # Draw input and output nodes
     for k in config.genome_config.input_keys:
-        inputs.add(k)
-        name = node_names.get(k, str(k))
-        input_attrs = {'style': 'filled', 'shape': 'box', 'fillcolor': node_colors.get(k, 'lightgray')}
-        dot.node(name, _attributes=input_attrs)
-
-    outputs = set()
+        dot.node(node_names.get(k, str(k)), style='filled', shape='box', fillcolor=node_colors.get(k, 'lightgray'))
     for k in config.genome_config.output_keys:
-        outputs.add(k)
-        name = node_names.get(k, str(k))
-        node_attrs = {'style': 'filled', 'fillcolor': node_colors.get(k, 'lightblue')}
-
-        dot.node(name, _attributes=node_attrs)
-
+        dot.node(node_names.get(k, str(k)), style='filled', fillcolor=node_colors.get(k, 'lightblue'))
+    
+    # Draw hidden nodes
     for n in genome.nodes.keys():
-        if n in inputs or n in outputs:
-            continue
-
-        attrs = {'style': 'filled', 'fillcolor': node_colors.get(n, 'white')}
-        dot.node(str(n), _attributes=attrs)
-
-    for cg in genome.connections.values():
-        if cg.enabled or show_disabled:
-            input, output = cg.key
-            a = node_names.get(input, str(input))
-            b = node_names.get(output, str(output))
-            style = 'solid' if cg.enabled else 'dotted'
-            color = 'green' if cg.weight > 0 else 'red'
-            width = str(0.1 + abs(cg.weight / 5.0))
-            dot.edge(a, b, _attributes={'style': style, 'color': color, 'penwidth': width})
-
-    dot.render(filename, view=view)
-
-    return dot
-
-def draw_kan_net(config, genome, view=False, filename=None, node_names=None, show_disabled=True, prune_unused=False,
-                node_colors=None, fmt='svg'):
-    """Receives a KANGenome and draws a neural network with arbitrary topology."""
-    # Use the existing draw_net function as a starting point
-    dot = draw_net(config, genome, view=False, filename=None, node_names=node_names, 
-                  show_disabled=show_disabled, prune_unused=prune_unused, 
-                  node_colors=node_colors, fmt=fmt)
+        if n not in config.genome_config.input_keys and n not in config.genome_config.output_keys:
+            dot.node(str(n), style='filled', fillcolor=node_colors.get(n, 'white'))
     
-    # Add KAN-specific visualizations (spline indicators)
+    # Draw connections, including KAN-specific splines
     for cg in genome.connections.values():
         if cg.enabled or show_disabled:
             input, output = cg.key
+            a, b = node_names.get(input, str(input)), node_names.get(output, str(output))
             
-            # Get node names
-            a = node_names.get(input, str(input))
-            b = node_names.get(output, str(output))
-            
-            # Add a small label showing number of spline segments
-            n_segments = len(cg.spline_segments)
-            if n_segments > 0:
-                # Create intermediate node to represent the spline
+            if hasattr(cg, 'spline_segments') and len(cg.spline_segments) > 0:
+                # Add an intermediate node for the spline
                 spline_node = f"{input}_{output}_spline"
-                dot.node(spline_node, label=f"KAN\n{n_segments}", _attributes={'style': 'filled', 'shape': 'box', 'fillcolor': 'yellow', 'fontsize': '7'})
-                
-                # Connect input to spline and spline to output
-                dot.edge(a, spline_node, _attributes={'style': 'solid'})
-                
-                # Style based on weight
-                style = 'solid' if cg.enabled else 'dotted'
-                color = 'green' if cg.weight > 0 else 'red'
-                width = str(0.1 + abs(cg.weight / 5.0))
-                dot.edge(spline_node, b, _attributes={'style': style, 'color': color, 'penwidth': width})
+                dot.node(spline_node, label=f"KAN\n{len(cg.spline_segments)}", style='filled', shape='box', fillcolor='yellow', fontsize='7')
+                dot.edge(a, spline_node, style='solid')
+                dot.edge(spline_node, b, style='solid', color='green' if cg.weight > 0 else 'red', penwidth=str(0.1 + abs(cg.weight / 5.0)))
+            else:
+                # Regular connection
+                dot.edge(a, b, style='solid' if cg.enabled else 'dotted', color='green' if cg.weight > 0 else 'red', penwidth=str(0.1 + abs(cg.weight / 5.0)))
     
-    if filename is not None:
+    if filename:
         dot.render(filename, view=view)
     
     return dot

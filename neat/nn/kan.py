@@ -1,20 +1,69 @@
-import torch
+# import torch
 import numpy as np
 from neat.graphs import feed_forward_layers
 
-class SplineFunctionImpl:
-    """Implements a piecewise linear spline function."""
+# class SplineFunctionImpl:
+#     """Implements a piecewise linear spline function."""
     
-    def __init__(self, control_points):
-        """Initialize with sorted control points [(x1, y1), (x2, y2), ...]"""
+#     def __init__(self, control_points):
+#         """Initialize with sorted control points [(x1, y1), (x2, y2), ...]"""
+#         sorted_points = sorted(control_points, key=lambda p: p[0]) if control_points else []
+#         self.x_points = [p[0] for p in sorted_points]
+#         self.y_points = [p[1] for p in sorted_points]
+        
+#     def __call__(self, x):
+#         """Evaluate the spline at point x using piecewise linear interpolation"""
+#         # Handle empty case
+#         if not self.x_points:
+#             return 0.0
+            
+#         # Handle single point case
+#         if len(self.x_points) == 1:
+#             return self.y_points[0]
+            
+#         # Handle boundary cases
+#         if x <= self.x_points[0]:
+#             return self.y_points[0]
+#         if x >= self.x_points[-1]:
+#             return self.y_points[-1]
+            
+#         # Find the appropriate segment
+#         for i in range(len(self.x_points) - 1):
+#             if self.x_points[i] <= x <= self.x_points[i+1]:
+#                 # Linear interpolation
+#                 t = (x - self.x_points[i]) / (self.x_points[i+1] - self.x_points[i])
+#                 return (1-t) * self.y_points[i] + t * self.y_points[i+1]
+        
+#         # Fallback (should never reach here)
+#         return 0.0
+
+import numpy as np
+from scipy.interpolate import make_interp_spline
+
+class SplineFunctionImpl:
+    """Implements a smooth B-spline function."""
+    
+    def __init__(self, control_points, degree=3):
+        """Initialize with control points [(x1, y1), (x2, y2), ...] and spline degree."""
         sorted_points = sorted(control_points, key=lambda p: p[0]) if control_points else []
-        self.x_points = [p[0] for p in sorted_points]
-        self.y_points = [p[1] for p in sorted_points]
+        self.x_points = np.array([p[0] for p in sorted_points])
+        self.y_points = np.array([p[1] for p in sorted_points])
+        self.degree = min(degree, max(1, len(self.x_points) - 1))  # Adjust degree based on number of points
+        self.spline = None
+        
+        # Create the B-spline if we have enough points
+        if len(self.x_points) > 1:
+            try:
+                # Use scipy's B-spline implementation
+                self.spline = make_interp_spline(self.x_points, self.y_points, k=self.degree)
+            except Exception:
+                # Fall back to linear interpolation if B-spline creation fails
+                pass
         
     def __call__(self, x):
-        """Evaluate the spline at point x using piecewise linear interpolation"""
+        """Evaluate the spline at point x."""
         # Handle empty case
-        if not self.x_points:
+        if not len(self.x_points):
             return 0.0
             
         # Handle single point case
@@ -27,7 +76,14 @@ class SplineFunctionImpl:
         if x >= self.x_points[-1]:
             return self.y_points[-1]
             
-        # Find the appropriate segment
+        # If we have a spline, use it
+        if self.spline is not None:
+            try:
+                return float(self.spline(x))
+            except Exception:
+                pass  # Fall back to linear interpolation
+                
+        # Fall back to linear interpolation
         for i in range(len(self.x_points) - 1):
             if self.x_points[i] <= x <= self.x_points[i+1]:
                 # Linear interpolation
