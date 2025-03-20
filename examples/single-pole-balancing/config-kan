@@ -9,7 +9,7 @@ reset_on_extinction   = 0
 [KANGenome]
 # Network parameters
 num_inputs            = 4
-num_hidden            = 1
+num_hidden            = 3
 num_outputs           = 1
 initial_connection    = partial_direct 0.5
 feed_forward          = True
@@ -108,6 +108,9 @@ max_spline_segments     = 10
 spline_range_min        = -10.0
 spline_range_max        = 10.0
 grid_eps                = 0.02
+kan_segments_distance_treshold = 0.01
+kan_connection_crossover_add_segment_rate = 0.5
+kan_segment_crossover_better_fitness_rate = 0.75
 
 [DefaultSpeciesSet]
 compatibility_threshold = 3.0
