@@ -362,9 +362,12 @@ class KANGenome(DefaultGenome):
         # else:
         #     parent1, parent2 = genome2, genome1
 
+        better_parent = parent1 if parent1.fitness > parent2.fitness else parent2
+        worse_parent = parent1 if parent1.fitness <= parent2.fitness else parent2
+
         # Inherit connection genes
-        for key, cg1 in parent1.connections.items():
-            cg2 = parent2.connections.get(key)
+        for key, cg1 in better_parent.connections.items():
+            cg2 = worse_parent.connections.get(key)
             if cg2 is None:
                 # Excess or disjoint gene: copy from the fittest parent.
                 self.connections[key] = cg1.copy()
@@ -372,9 +375,18 @@ class KANGenome(DefaultGenome):
                 # Homologous gene: combine genes from both parents.
                 self.connections[key] = cg1.crossover(cg2, config)
 
+            if len(self.connections[key].spline_segments) < config.min_spline_segments:
+                # Add segments until we reach minimum
+                self._ensure_min_spline_segments(self.connections[key], config)
+                
+            # IMPORTANT FIX: Ensure connection doesn't exceed max_spline_segments
+            if len(self.connections[key].spline_segments) > config.max_spline_segments:
+                # Remove excess segments, keeping the ones with highest absolute values
+                self._reduce_to_max_spline_segments(self.connections[key], config)
+
         # Inherit node genes
-        parent1_set = parent1.nodes
-        parent2_set = parent2.nodes
+        parent1_set = better_parent.nodes
+        parent2_set = worse_parent.nodes
 
         for key, ng1 in parent1_set.items():
             ng2 = parent2_set.get(key)
@@ -387,119 +399,35 @@ class KANGenome(DefaultGenome):
                 self.nodes[key] = ng1.crossover(ng2)
         
         # Handle KAN-specific attributes for connections
-        for conn_key, conn in self.connections.items():
-            # Check if this connection exists in either parent
-            p1_conn = parent1.connections.get(conn_key)
-            p2_conn = parent2.connections.get(conn_key)
+        # for conn_key, conn in self.connections.items():
+        #     # Check if this connection exists in either parent
+        #     p1_conn = better_parent.connections.get(conn_key)
+        #     p2_conn = worse_parent.connections.get(conn_key)
             
-            if p1_conn and p2_conn:
+        #     if p1_conn and p2_conn:
 
-                better_conn = p1_conn if parent1.fitness > parent2.fitness else p2_conn
-                worse_conn = p1_conn if parent1.fitness <= parent2.fitness else p2_conn
-
-                new_conn = better_conn.crossover(worse_conn, config)
-                self.connections[conn_key] = new_conn
-                # Connection exists in both parents
-                # Inherit scale and bias from the fitter parent (or random)
-                # if parent1.fitness > parent2.fitness:
-                #     conn.scale = p1_conn.scale
-                #     conn.bias = p1_conn.bias
-                # elif parent2.fitness > parent1.fitness:
-                #     conn.scale = p2_conn.scale
-                #     conn.bias = p2_conn.bias
-                # else:
-                #     # Equal fitness, choose randomly
-                #     if random.random() > 0.5:
-                #         conn.scale = p1_conn.scale
-                #         conn.bias = p1_conn.bias
-                #     else:
-                #         conn.scale = p2_conn.scale
-                #         conn.bias = p2_conn.bias
+        #         new_conn = p1_conn.crossover(p2_conn, config)
+        #         self.connections[conn_key] = new_conn
                 
-                # Perform crossover of spline segments
-                # p1_spline_segments = getattr(p1_conn, 'spline_segments', {})
-                # p2_spline_segments = getattr(p2_conn, 'spline_segments', {})
-                
-                # # Get all grid positions from both parents
-                # all_positions = set()
-                # for seg in p1_spline_segments.values():
-                #     all_positions.add(seg.grid_position)
-                # for seg in p2_spline_segments.values():
-                #     all_positions.add(seg.grid_position)
-                
-                # # For each position, perform crossover
-                # for pos in all_positions:
-                #     seg1 = next((seg for seg in p1_spline_segments.values() 
-                #                if abs(seg.grid_position - pos) < 1e-6), None)
-                #     seg2 = next((seg for seg in p2_spline_segments.values() 
-                #                if abs(seg.grid_position - pos) < 1e-6), None)
+        #     elif p1_conn:
+        #         self.connections[conn_key] = p1_conn.copy()
                     
-                #     if seg1 and seg2:
-                #         # Both parents have a segment at this position
-                #         if parent1.fitness > parent2.fitness:
-                #             # Take segment from fitter parent
-                #             seg_key = (conn.key[0], conn.key[1], pos)
-                #             conn.add_spline_segment(seg_key, pos, seg1.value)
-                #         elif parent2.fitness > parent1.fitness:
-                #             # Take segment from fitter parent
-                #             seg_key = (conn.key[0], conn.key[1], pos)
-                #             conn.add_spline_segment(seg_key, pos, seg2.value)
-                #         else:
-                #             # Equal fitness, choose randomly
-                #             if random.random() > 0.5:
-                #                 seg_key = (conn.key[0], conn.key[1], pos)
-                #                 conn.add_spline_segment(seg_key, pos, seg1.value)
-                #             else:
-                #                 seg_key = (conn.key[0], conn.key[1], pos)
-                #                 conn.add_spline_segment(seg_key, pos, seg2.value)
-                #     elif seg1:
-                #         # Only first parent has this position
-                #         # if random.random() > 0.5:  # 50% chance to inherit
-                #         seg_key = (conn.key[0], conn.key[1], pos)
-                #         conn.add_spline_segment(seg_key, pos, seg1.value)
-                #     elif seg2:
-                #         # Only second parent has this position
-                #         # if random.random() > 0.5:  # 50% chance to inherit
-                #         seg_key = (conn.key[0], conn.key[1], pos)
-                #         conn.add_spline_segment(seg_key, pos, seg2.value)
-                
-            elif p1_conn:
-                # Only first parent has this connection
-                # conn.scale = p1_conn.scale
-                # conn.bias = p1_conn.bias
-                
-                # # Inherit spline segments
-                # p1_spline_segments = getattr(p1_conn, 'spline_segments', {})
-                # for seg in p1_spline_segments.values():
-                #     seg_key = (conn_key[0], conn_key[1], seg.grid_position)
-                #     conn.add_spline_segment(seg_key, seg.grid_position, seg.value)
-                self.connections[conn_key] = p1_conn.copy()
+        #     elif p2_conn:
+        #         self.connections[conn_key] = p2_conn.copy()
                     
-            elif p2_conn:
-                # # Only second parent has this connection
-                # conn.scale = p2_conn.scale
-                # conn.bias = p2_conn.bias
-                
-                # # Inherit spline segments
-                # p2_spline_segments = getattr(p2_conn, 'spline_segments', {})
-                # for seg in p2_spline_segments.values():
-                #     seg_key = (conn_key[0], conn_key[1], seg.grid_position)
-                #     conn.add_spline_segment(seg_key, seg.grid_position, seg.value)
-                self.connections[conn_key] = p2_conn.copy()
-                    
-            else:  # New connection
-                # Initialize with default spline segments
-                self._initialize_connection_splines(conn, config)
+        #     else:  # New connection
+        #         # Initialize with default spline segments
+        #         self._initialize_connection_splines(conn, config)
                 
             # IMPORTANT FIX: Ensure connection has at least min_spline_segments
-            if len(conn.spline_segments) < config.min_spline_segments:
-                # Add segments until we reach minimum
-                self._ensure_min_spline_segments(conn, config)
+            # if len(conn.spline_segments) < config.min_spline_segments:
+            #     # Add segments until we reach minimum
+            #     self._ensure_min_spline_segments(conn, config)
                 
-            # IMPORTANT FIX: Ensure connection doesn't exceed max_spline_segments
-            if len(conn.spline_segments) > config.max_spline_segments:
-                # Remove excess segments, keeping the ones with highest absolute values
-                self._reduce_to_max_spline_segments(conn, config)
+            # # IMPORTANT FIX: Ensure connection doesn't exceed max_spline_segments
+            # if len(conn.spline_segments) > config.max_spline_segments:
+            #     # Remove excess segments, keeping the ones with highest absolute values
+            #     self._reduce_to_max_spline_segments(conn, config)
     
     def _ensure_min_spline_segments(self, conn, config):
         """Ensure a connection has at least min_spline_segments."""
@@ -585,6 +513,13 @@ class KANGenome(DefaultGenome):
                 # Ensure max segments
                 if len(conn.spline_segments) > config.max_spline_segments:
                     self._reduce_to_max_spline_segments(conn, config)
+        
+        # TODO: Randomly delete some connections and hidden nodes
+        # for key in list(self.connections.keys()):
+        #     if random.random() < config.kan_connection_delete_rate:
+        #         del self.connections[key]
+
+
     
     def distance(self, other, config):
         """Return the genetic distance between this genome and the other."""

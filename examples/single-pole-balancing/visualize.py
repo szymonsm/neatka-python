@@ -108,113 +108,6 @@ def plot_species(statistics, view=False, filename='speciation.svg'):
     plt.close()
 
 
-# def draw_net(config, genome, view=False, filename=None, node_names=None, show_disabled=True, prune_unused=False,
-#              node_colors=None, fmt='svg'):
-#     """ Receives a genome and draws a neural network with arbitrary topology. """
-#     # Attributes for network nodes.
-#     if graphviz is None:
-#         warnings.warn("This display is not available due to a missing optional dependency (graphviz)")
-#         return
-
-#     # If requested, use a copy of the genome which omits all components that won't affect the output.
-#     if prune_unused:
-#         if show_disabled:
-#             warnings.warn("show_disabled has no effect when prune_unused is True")
-
-#         genome = genome.get_pruned_copy(config.genome_config)
-
-#     if node_names is None:
-#         node_names = {}
-
-#     assert type(node_names) is dict
-
-#     if node_colors is None:
-#         node_colors = {}
-
-#     assert type(node_colors) is dict
-
-#     node_attrs = {
-#         'shape': 'circle',
-#         'fontsize': '9',
-#         'height': '0.2',
-#         'width': '0.2'}
-
-#     dot = graphviz.Digraph(format=fmt, node_attr=node_attrs)
-
-#     inputs = set()
-#     for k in config.genome_config.input_keys:
-#         inputs.add(k)
-#         name = node_names.get(k, str(k))
-#         input_attrs = {'style': 'filled', 'shape': 'box', 'fillcolor': node_colors.get(k, 'lightgray')}
-#         dot.node(name, _attributes=input_attrs)
-
-#     outputs = set()
-#     for k in config.genome_config.output_keys:
-#         outputs.add(k)
-#         name = node_names.get(k, str(k))
-#         node_attrs = {'style': 'filled', 'fillcolor': node_colors.get(k, 'lightblue')}
-
-#         dot.node(name, _attributes=node_attrs)
-
-#     for n in genome.nodes.keys():
-#         if n in inputs or n in outputs:
-#             continue
-
-#         attrs = {'style': 'filled', 'fillcolor': node_colors.get(n, 'white')}
-#         dot.node(str(n), _attributes=attrs)
-
-#     for cg in genome.connections.values():
-#         if cg.enabled or show_disabled:
-#             input, output = cg.key
-#             a = node_names.get(input, str(input))
-#             b = node_names.get(output, str(output))
-#             style = 'solid' if cg.enabled else 'dotted'
-#             color = 'green' if cg.weight > 0 else 'red'
-#             width = str(0.1 + abs(cg.weight / 5.0))
-#             dot.edge(a, b, _attributes={'style': style, 'color': color, 'penwidth': width})
-
-#     dot.render(filename, view=view)
-
-#     return dot
-
-# def draw_kan_net(config, genome, view=False, filename=None, node_names=None, show_disabled=True, prune_unused=False,
-#                 node_colors=None, fmt='svg'):
-#     """Receives a KANGenome and draws a neural network with arbitrary topology."""
-#     # Use the existing draw_net function as a starting point
-#     dot = draw_net(config, genome, view=False, filename=None, node_names=node_names, 
-#                   show_disabled=show_disabled, prune_unused=prune_unused, 
-#                   node_colors=node_colors, fmt=fmt)
-    
-#     # Add KAN-specific visualizations (spline indicators)
-#     for cg in genome.connections.values():
-#         if cg.enabled or show_disabled:
-#             input, output = cg.key
-            
-#             # Get node names
-#             a = node_names.get(input, str(input))
-#             b = node_names.get(output, str(output))
-            
-#             # Add a small label showing number of spline segments
-#             n_segments = len(cg.spline_segments)
-#             if n_segments > 0:
-#                 # Create intermediate node to represent the spline
-#                 spline_node = f"{input}_{output}_spline"
-#                 dot.node(spline_node, label=f"KAN\n{n_segments}", _attributes={'style': 'filled', 'shape': 'box', 'fillcolor': 'yellow', 'fontsize': '7'})
-                
-#                 # Connect input to spline and spline to output
-#                 dot.edge(a, spline_node, _attributes={'style': 'solid'})
-                
-#                 # Style based on weight
-#                 style = 'solid' if cg.enabled else 'dotted'
-#                 color = 'green' if cg.weight > 0 else 'red'
-#                 width = str(0.1 + abs(cg.weight / 5.0))
-#                 dot.edge(spline_node, b, _attributes={'style': style, 'color': color, 'penwidth': width})
-    
-#     if filename is not None:
-#         dot.render(filename, view=view)
-    
-#     return dot
-
 def draw_kan_net(config, genome, view=False, filename=None, node_names=None, show_disabled=True, prune_unused=False,
                  node_colors=None, fmt='svg'):
     """Draws a neural network with KAN-specific spline visualizations."""
@@ -235,6 +128,15 @@ def draw_kan_net(config, genome, view=False, filename=None, node_names=None, sho
     }
     dot = graphviz.Digraph(format=fmt, node_attr=node_attrs)
     
+    # Generate mini spline plots and store their paths
+    spline_plots = {}
+    for cg in genome.connections.values():
+        if (cg.enabled or show_disabled) and hasattr(cg, 'spline_segments') and len(cg.spline_segments) > 0:
+            input_key, output_key = cg.key
+            spline_img_path = _generate_mini_spline_plot(cg, f"spline_{input_key}_{output_key}.png")
+            if spline_img_path:
+                spline_plots[cg.key] = spline_img_path
+    
     # Draw input and output nodes
     for k in config.genome_config.input_keys:
         dot.node(node_names.get(k, str(k)), style='filled', shape='box', fillcolor=node_colors.get(k, 'lightgray'))
@@ -244,25 +146,105 @@ def draw_kan_net(config, genome, view=False, filename=None, node_names=None, sho
     # Draw hidden nodes
     for n in genome.nodes.keys():
         if n not in config.genome_config.input_keys and n not in config.genome_config.output_keys:
-            dot.node(str(n), style='filled', fillcolor=node_colors.get(n, 'white'))
+            dot.node(str(n), label=f"ID:{str(n)}\n∑", style='filled', fillcolor=node_colors.get(n, 'white'))
     
     # Draw connections, including KAN-specific splines
     for cg in genome.connections.values():
         if cg.enabled or show_disabled:
-            input, output = cg.key
-            a, b = node_names.get(input, str(input)), node_names.get(output, str(output))
+            input_key, output_key = cg.key
+            a = node_names.get(input_key, str(input_key))
+            b = node_names.get(output_key, str(output_key))
             
             if hasattr(cg, 'spline_segments') and len(cg.spline_segments) > 0:
                 # Add an intermediate node for the spline
-                spline_node = f"{input}_{output}_spline"
-                dot.node(spline_node, label=f"KAN\n{len(cg.spline_segments)}", style='filled', shape='box', fillcolor='yellow', fontsize='7')
+                spline_node = f"{input_key}_{output_key}_spline"
+                
+                # If we have a spline plot image, use it in the node
+                if cg.key in spline_plots:
+                    dot.node(spline_node, 
+                             label=f"SPLINE\n{len(cg.spline_segments)} segments", 
+                             style='filled', 
+                             shape='box', 
+                             fillcolor='yellow', 
+                             fontsize='10',
+                             width='1.0', 
+                             height='1.0',
+                             image=spline_plots[cg.key],
+                             imagescale='true',
+                             imagepos='tc')
+                else:
+                    dot.node(spline_node, 
+                             label=f"SPLINE\n{len(cg.spline_segments)} segments", 
+                             style='filled', 
+                             shape='box', 
+                             fillcolor='yellow', 
+                             fontsize='10',
+                             width='1.0', 
+                             height='1.0')
+                
                 dot.edge(a, spline_node, style='solid')
-                dot.edge(spline_node, b, style='solid', color='green' if cg.weight > 0 else 'red', penwidth=str(0.1 + abs(cg.weight / 5.0)))
+                dot.edge(spline_node, b, 
+                         style='solid' if cg.enabled else 'dotted', 
+                         color='green' if cg.weight > 0 else 'red', 
+                         penwidth=str(0.1 + abs(cg.weight / 5.0)),
+                         label=f"w={cg.weight:.2f}")
             else:
                 # Regular connection
-                dot.edge(a, b, style='solid' if cg.enabled else 'dotted', color='green' if cg.weight > 0 else 'red', penwidth=str(0.1 + abs(cg.weight / 5.0)))
+                dot.edge(a, b, 
+                         style='solid' if cg.enabled else 'dotted', 
+                         color='green' if cg.weight > 0 else 'red', 
+                         penwidth=str(0.1 + abs(cg.weight / 5.0)))
     
     if filename:
         dot.render(filename, view=view)
     
     return dot
+
+def _generate_mini_spline_plot(connection, filename):
+    """Generate a small image of the spline for a connection."""
+    try:
+        # Extract spline points
+        points = [(seg.grid_position, seg.value) 
+                 for seg in connection.spline_segments.values()]
+        
+        if not points:
+            return None
+        
+        # Sort points by x coordinate
+        points.sort(key=lambda x: x[0])
+        
+        # Generate mini plot
+        fig = plt.figure(figsize=(2, 1.5), dpi=100)
+        ax = fig.add_subplot(111)
+        
+        # Create x values for the spline
+        x_min = min(p[0] for p in points) - 0.1
+        x_max = max(p[0] for p in points) + 0.1
+        x = np.linspace(x_min, x_max, 100)
+        
+        # Get the spline function
+        spline_func = connection.get_spline_function()
+        
+        # Evaluate and plot the spline
+        y = [spline_func(xi) for xi in x]
+        ax.plot(x, y, 'b-')
+        
+        # Plot control points
+        x_points, y_points = zip(*points)
+        ax.scatter(x_points, y_points, c='r', marker='o', s=20)
+        
+        # Clean up the plot
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.set_title(f"w={connection.weight:.2f}", fontsize=8)
+        
+        # Remove axes and save with transparent background
+        ax.axis('off')
+        fig.tight_layout(pad=0)
+        fig.savefig(filename, transparent=True, bbox_inches='tight', pad_inches=0)
+        plt.close(fig)
+        
+        return filename
+    except Exception as e:
+        print(f"Error generating mini spline plot: {e}")
+        return None

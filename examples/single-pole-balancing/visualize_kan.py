@@ -3,6 +3,10 @@ Visualization utilities for Kolmogorov-Arnold Networks (KAN).
 """
 import matplotlib.pyplot as plt
 import numpy as np
+import os
+import tempfile
+import hashlib
+import graphviz
 from neat.kan_utils import plot_spline, visualize_kan_network
 
 def plot_kan_splines(genome, config, filename="kan_splines.png", view=False):
@@ -107,9 +111,7 @@ def plot_kan_splines(genome, config, filename="kan_splines.png", view=False):
         ax.set_ylabel("Output")
         ax.grid(True)
         print(f"Plotted spline for connection {conn.key}")
-    # print("I am here")
-    # fig.tight_layout()
-    print("I am here2")
+    fig.tight_layout()
     try:
         fig.savefig(filename)
         print(f"Saved spline plots to {filename}")
@@ -276,3 +278,118 @@ def input_response_analysis(genome, config, input_idx=0, view=False, filename="i
         plt.show()
     else:
         plt.close()
+
+def draw_kan_network_with_splines(genome, config, filename="kan_network.svg", view=False):
+    """
+    Draws the KAN network with embedded spline visualizations.
+    
+    Args:
+        genome: A KANGenome object
+        config: Configuration object
+        filename: Output filename
+        view: Whether to display the visualization
+    """
+    if not graphviz:
+        print("Graphviz not available. Cannot create network visualization.")
+        return None
+        
+    # Create a temporary directory for spline images
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # Generate spline images for each connection
+        spline_images = {}
+        for conn_key, conn in genome.connections.items():
+            if not conn.enabled or not hasattr(conn, 'spline_segments'):
+                continue
+                
+            # Generate a mini spline plot
+            points = [(seg.grid_position, seg.value) for seg in conn.spline_segments.values()]
+            if not points:
+                continue
+                
+            # Create the plot
+            fig, ax = plt.subplots(figsize=(2, 1.5), dpi=100)
+            
+            # Sort points and get x-range
+            points.sort(key=lambda p: p[0])
+            x_min = min(p[0] for p in points) - 0.1
+            x_max = max(p[0] for p in points) + 0.1
+            
+            # Plot spline
+            x = np.linspace(x_min, x_max, 100)
+            spline_func = conn.get_spline_function()
+            y = [spline_func(xi) for xi in x]
+            
+            ax.plot(x, y, 'b-')
+            
+            # Plot control points
+            x_points, y_points = zip(*points)
+            ax.scatter(x_points, y_points, c='r', marker='o', s=20)
+            
+            # Clean up plot
+            ax.set_xticks([])
+            ax.set_yticks([])
+            ax.axis('off')
+            
+            # Save the plot
+            img_path = os.path.join(temp_dir, f"spline_{conn_key[0]}_{conn_key[1]}.png")
+            fig.savefig(img_path, transparent=True, bbox_inches='tight', pad_inches=0)
+            plt.close(fig)
+            
+            spline_images[conn_key] = img_path
+        
+        # Create the network visualization
+        node_attrs = {'shape': 'circle', 'fontsize': '9', 'height': '0.2', 'width': '0.2'}
+        dot = graphviz.Digraph(format='svg', node_attr=node_attrs)
+        
+        # Add input nodes
+        for k in config.genome_config.input_keys:
+            dot.node(str(k), style='filled', shape='box', fillcolor='lightgray')
+        
+        # Add output nodes
+        for k in config.genome_config.output_keys:
+            dot.node(str(k), style='filled', shape='box', fillcolor='lightblue')
+        
+        # Add hidden nodes
+        for k in genome.nodes.keys():
+            if k not in config.genome_config.input_keys and k not in config.genome_config.output_keys:
+                dot.node(str(k), label=f"{k}\n∑", style='filled', fillcolor='white')
+        
+        # Add connections
+        for conn_key, conn in genome.connections.items():
+            if not conn.enabled:
+                continue
+                
+            input_key, output_key = conn_key
+            
+            if conn_key in spline_images:
+                # Add a spline node
+                spline_node = f"{input_key}_{output_key}_spline"
+                dot.node(spline_node,
+                        label=f"SPLINE\n{len(conn.spline_segments)} segments",
+                        style='filled',
+                        shape='box',
+                        fillcolor='yellow',
+                        fontsize='10',
+                        width='1.5',
+                        height='1.5',
+                        image=spline_images[conn_key],
+                        imagescale='true')
+                
+                # Connect input -> spline -> output
+                dot.edge(str(input_key), spline_node, style='solid')
+                dot.edge(spline_node, str(output_key), 
+                        style='solid',
+                        color='green' if conn.weight > 0 else 'red',
+                        penwidth=str(0.1 + abs(conn.weight / 5.0)),
+                        label=f"w={conn.weight:.2f}\ns={conn.scale:.2f}\nb={conn.bias:.2f}")
+            else:
+                # Direct connection
+                dot.edge(str(input_key), str(output_key),
+                        style='solid',
+                        color='green' if conn.weight > 0 else 'red',
+                        penwidth=str(0.1 + abs(conn.weight / 5.0)))
+        
+        # Render the graph
+        dot.render(filename, view=view)
+        
+        return dot
