@@ -173,14 +173,14 @@ def visualize_results(winner, stats, config, results_dir):
     
     # Use KAN-specific visualization functions
     print("Visualizing winner...")
-    net_path = os.path.join(results_dir, "network.svg")
+    net_path = os.path.join(results_dir, "network")
     visualize.draw_kan_net(config, winner, view=False, node_names=node_names,
-                        filename=net_path)
+                        filename=net_path, fmt='png')
     
     print("Visualizing winner (pruned)...")
-    pruned_path = os.path.join(results_dir, "network-pruned.svg")
+    pruned_path = os.path.join(results_dir, "network-pruned")
     visualize.draw_kan_net(config, winner, view=False, node_names=node_names,
-                        filename=pruned_path, prune_unused=True)
+                        filename=pruned_path, prune_unused=True, fmt='png')
     
     # Plot spline visualizations
     print("Plotting splines...")
@@ -189,10 +189,10 @@ def visualize_results(winner, stats, config, results_dir):
                                   filename=splines_path, view=False)
     
     # Plot KAN network with splines
-    print("Plotting KAN network with splines...")
-    kan_net_path = os.path.join(results_dir, "kan-network.svg")
-    visualize_kan.draw_kan_network_with_splines(winner, config, 
-                                              filename=kan_net_path, view=False)
+    # print("Plotting KAN network with splines...")
+    # kan_net_path = os.path.join(results_dir, "kan-network.svg")
+    # visualize_kan.draw_kan_network_with_splines(winner, config, 
+    #                                           filename=kan_net_path, view=False)
     
     # Analyze the genome and save to file
     print("Analyzing genome...")

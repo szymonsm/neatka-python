@@ -1,5 +1,6 @@
 import copy
 import warnings
+import os
 
 import graphviz
 import matplotlib.pyplot as plt
@@ -130,13 +131,18 @@ def draw_kan_net(config, genome, view=False, filename=None, node_names=None, sho
     
     # Generate mini spline plots and store their paths
     spline_plots = {}
+    # Drop the last part of the filename to get the directory
+    spline_img_path_dir = filename.split("\\")[:-1]
+    # Create a new directory for the spline plots
+    spline_img_path_dir = "\\".join(spline_img_path_dir)
+    spline_img_path_dir = os.path.join(spline_img_path_dir, 'spline_plots')
+    os.makedirs(spline_img_path_dir, exist_ok=True)
     for cg in genome.connections.values():
         if (cg.enabled or show_disabled) and hasattr(cg, 'spline_segments') and len(cg.spline_segments) > 0:
             input_key, output_key = cg.key
-            spline_img_path = _generate_mini_spline_plot(cg, f"spline_{input_key}_{output_key}.png")
+            spline_img_path = _generate_mini_spline_plot(cg, os.path.join(spline_img_path_dir, f"spline_{input_key}_{output_key}.png"))
             if spline_img_path:
                 spline_plots[cg.key] = spline_img_path
-    
     # Draw input and output nodes
     for k in config.genome_config.input_keys:
         dot.node(node_names.get(k, str(k)), style='filled', shape='box', fillcolor=node_colors.get(k, 'lightgray'))
@@ -158,14 +164,17 @@ def draw_kan_net(config, genome, view=False, filename=None, node_names=None, sho
             if hasattr(cg, 'spline_segments') and len(cg.spline_segments) > 0:
                 # Add an intermediate node for the spline
                 spline_node = f"{input_key}_{output_key}_spline"
+
+                print(spline_plots[cg.key])
                 
                 # If we have a spline plot image, use it in the node
                 if cg.key in spline_plots:
                     dot.node(spline_node, 
-                             label=f"SPLINE\n{len(cg.spline_segments)} segments", 
+                            #  label=f"SPLINE\n{len(cg.spline_segments)} segments",
+                             label='',
                              style='filled', 
                              shape='box', 
-                             fillcolor='yellow', 
+                             fillcolor='white', 
                              fontsize='10',
                              width='1.0', 
                              height='1.0',
@@ -186,8 +195,8 @@ def draw_kan_net(config, genome, view=False, filename=None, node_names=None, sho
                 dot.edge(spline_node, b, 
                          style='solid' if cg.enabled else 'dotted', 
                          color='green' if cg.weight > 0 else 'red', 
-                         penwidth=str(0.1 + abs(cg.weight / 5.0)),
-                         label=f"w={cg.weight:.2f}")
+                         penwidth=str(0.1 + abs(cg.weight)),
+                         label=f"w={cg.weight:.2f}\ns={cg.scale:.2f}\nb={cg.bias:.2f}")
             else:
                 # Regular connection
                 dot.edge(a, b, 
@@ -196,7 +205,7 @@ def draw_kan_net(config, genome, view=False, filename=None, node_names=None, sho
                          penwidth=str(0.1 + abs(cg.weight / 5.0)))
     
     if filename:
-        dot.render(filename, view=view)
+        dot.render(filename, view=view, format=fmt, cleanup=True)
     
     return dot
 
@@ -234,14 +243,15 @@ def _generate_mini_spline_plot(connection, filename):
         ax.scatter(x_points, y_points, c='r', marker='o', s=20)
         
         # Clean up the plot
-        ax.set_xticks([])
-        ax.set_yticks([])
-        ax.set_title(f"w={connection.weight:.2f}", fontsize=8)
+        # ax.set_xticks([])
+        # ax.set_yticks([])
+        # ax.set_title(f"w={connection.weight:.2f}", fontsize=8)
         
         # Remove axes and save with transparent background
-        ax.axis('off')
+        # ax.axis('off')
         fig.tight_layout(pad=0)
         fig.savefig(filename, transparent=True, bbox_inches='tight', pad_inches=0)
+        # view the plot
         plt.close(fig)
         
         return filename

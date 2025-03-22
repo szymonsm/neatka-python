@@ -95,9 +95,9 @@ def plot_kan_splines(genome, config, filename="kan_splines.png", view=False):
             x_points, y_points = zip(*points)
             ax.scatter(x_points, y_points, c='r', marker='o')
 
-            print(f"x={x}")
-            print(f"y={y}")
-            print(f"points={points}")
+            # print(f"x={x}")
+            # print(f"y={y}")
+            # print(f"points={points}")
             
         except Exception as e:
             print(f"Error plotting spline for connection {conn.key}: {str(e)}")

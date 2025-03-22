@@ -1,0 +1,16 @@
+Genome ID: 444
+Fitness: 1.270000000000001
+Nodes: 5
+Connections: 12
+Enabled connections: 10
+  Connection (-1, 569): 7 segments, weight=1.000, scale=3.505, bias=1.234
+  Connection (-3, 570): 5 segments, weight=1.000, scale=3.190, bias=-0.334
+  Connection (-4, 0): 8 segments, weight=1.000, scale=3.581, bias=0.857
+  Connection (-1, 570): 7 segments, weight=1.000, scale=0.555, bias=-1.860
+  Connection (-4, 568): 6 segments, weight=1.000, scale=0.600, bias=-1.712
+  Connection (570, 0): 6 segments, weight=1.000, scale=-0.744, bias=0.966
+  Connection (-2, 570): 6 segments, weight=1.000, scale=0.026, bias=0.503
+  Connection (568, 0): 5 segments, weight=1.000, scale=-0.435, bias=-0.663
+  Connection (-4, 753): 2 segments, weight=1.000, scale=1.492, bias=-2.516
+  Connection (753, 570): 2 segments, weight=1.000, scale=0.666, bias=0.612
+Total spline segments: 54

@@ -108,7 +108,7 @@ def setup_results_directory(config, experiment_name='kan', seed=None, force_new=
             except Exception as e:
                 print(f"Warning: Could not load seed from existing run: {e}")
             
-            return results_dir, run_id, False, seed
+            return results_dir, run_id, False
     
     # Create a new run directory
     results_dir = os.path.join(exp_dir, run_id)

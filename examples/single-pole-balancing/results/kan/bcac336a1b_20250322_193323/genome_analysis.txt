@@ -1,0 +1,16 @@
+Genome ID: 3039
+Fitness: 53.98999999999783
+Nodes: 4
+Connections: 10
+Enabled connections: 10
+  Connection (-4, 262): 8 segments, weight=1.000, scale=1.220, bias=-1.116
+  Connection (264, 0): 9 segments, weight=1.000, scale=1.895, bias=-1.016
+  Connection (263, 0): 7 segments, weight=1.000, scale=-0.863, bias=-1.770
+  Connection (-4, 0): 7 segments, weight=1.000, scale=2.535, bias=1.375
+  Connection (-4, 264): 7 segments, weight=1.000, scale=0.151, bias=2.234
+  Connection (-3, 263): 7 segments, weight=1.000, scale=3.581, bias=2.289
+  Connection (-2, 264): 4 segments, weight=1.000, scale=1.998, bias=-0.236
+  Connection (-3, 264): 5 segments, weight=1.000, scale=-0.623, bias=0.587
+  Connection (-1, 264): 10 segments, weight=1.000, scale=0.444, bias=-0.968
+  Connection (-2, 263): 6 segments, weight=1.000, scale=0.350, bias=2.743
+Total spline segments: 70
