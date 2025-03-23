@@ -15,9 +15,6 @@ from movie import make_movie
 import visualize_kan
 import results_manager
 
-# Make OpenMP errors go away
-os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
-
 def load_genome(genome_path):
     """Load a genome from the specified path."""
     try:
@@ -31,6 +28,8 @@ def test_genome(genome_path=None, view=False):
     """Test a genome and visualize its performance."""
     # Load the config file
     local_dir = os.path.dirname(__file__)
+    # take one dir higher
+    # local_local_dir = os.path.dirname(local_dir)
     config_path = os.path.join(local_dir, 'config-kan')
     config = neat.Config(KANGenome, neat.DefaultReproduction,
                          neat.DefaultSpeciesSet, neat.DefaultStagnation,
@@ -54,9 +53,10 @@ def test_genome(genome_path=None, view=False):
     print('Loaded genome:')
     print(c)
     
+    local_results_path = os.path.dirname(genome_path)
     # Set up the results directory
-    results_dir, run_id, _ = results_manager.setup_results_directory(config)
-    test_dir = os.path.join(results_dir, 'test_results')
+    # results_dir, run_id, _ = results_manager.setup_results_directory(config)
+    test_dir = os.path.join(local_results_path, 'test_results')
     os.makedirs(test_dir, exist_ok=True)
     
     # Create the network and simulator
@@ -64,28 +64,28 @@ def test_genome(genome_path=None, view=False):
     sim = CartPole()
     
     # Print detailed analysis of the genome
-    analysis_path = os.path.join(test_dir, 'analysis.txt')
-    with open(analysis_path, 'w') as f:
-        # Redirect stdout to the file
-        import sys
-        original_stdout = sys.stdout
-        sys.stdout = f
+    # analysis_path = os.path.join(test_dir, 'analysis.txt')
+    # with open(analysis_path, 'w') as f:
+    #     # Redirect stdout to the file
+    #     import sys
+    #     original_stdout = sys.stdout
+    #     sys.stdout = f
         
-        visualize_kan.analyze_kan_genome(c, config.genome_config)
+    #     visualize_kan.analyze_kan_genome(c, config.genome_config)
         
-        # Restore stdout
-        sys.stdout = original_stdout
+    #     # Restore stdout
+    #     sys.stdout = original_stdout
     
     # Plot spline visualizations
-    try:
-        print("\nPlotting splines...")
-        splines_path = os.path.join(test_dir, 'splines.png')
-        visualize_kan.plot_kan_splines(c, config.genome_config, 
-                                      filename=splines_path, view=view)
-        print("Splines plotted successfully.")
-    except Exception as e:
-        print(f"Error plotting splines: {str(e)}")
-        traceback.print_exc()
+    # try:
+    #     print("\nPlotting splines...")
+    #     splines_path = os.path.join(test_dir, 'splines.png')
+    #     visualize_kan.plot_kan_splines(c, config.genome_config, 
+    #                                   filename=splines_path, view=view)
+    #     print("Splines plotted successfully.")
+    # except Exception as e:
+    #     print(f"Error plotting splines: {str(e)}")
+    #     traceback.print_exc()
     
     # Run the simulation
     print("\nInitial conditions:")
@@ -115,7 +115,7 @@ def test_genome(genome_path=None, view=False):
         
         balance_time = sim.t
     
-    print('Pole balanced for {0:.1f} of 120.0 seconds'.format(balance_time))
+    print('Pole balanced for {0:.1f} seconds'.format(balance_time))
     
     print("\nFinal conditions:")
     print("        x = {0:.4f}".format(sim.x))
@@ -189,7 +189,7 @@ def test_genome(genome_path=None, view=False):
         print("\nCreating movie... (this may take a while)")
         movie_path = os.path.join(test_dir, 'simulation.mp4')
         make_movie(net, discrete_actuator_force, min(15.0, balance_time + 1.0), 
-                  movie_path, fps=50)
+                  movie_path)
         print(f"Movie created successfully and saved to {movie_path}")
     except Exception as e:
         print(f"Error creating movie: {str(e)}")

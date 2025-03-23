@@ -160,7 +160,7 @@ def visualize_results(winner, stats, config, results_dir):
     print("Plotting statistics...")
     if stats.generation_statistics:  # Check if we have valid statistics
         stats_path = os.path.join(results_dir, "fitness.png")
-        visualize.plot_stats(stats, ylog=True, view=False, filename=stats_path)
+        visualize.plot_stats(stats, ylog=False, view=False, filename=stats_path)
         
         print("Plotting species...")
         species_path = os.path.join(results_dir, "speciation.png")
