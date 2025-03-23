@@ -5,6 +5,7 @@ from neat.config import ConfigParameter
 from neat.genes import DefaultNodeGene, DefaultConnectionGene, BaseGene
 from neat.attributes import FloatAttribute, BoolAttribute, StringAttribute
 from neat.nn.kan import SplineFunctionImpl
+from neat.graphs import creates_cycle
 
 class KANNodeGene(DefaultNodeGene):
     """Node gene for Kolmogorov-Arnold Networks.
@@ -43,13 +44,13 @@ class SplineSegmentGene(BaseGene):
             return SplineSegmentGene(self.key, gene2.value, gene2.grid_position)
         
     def mutate(self, config):
-        if random.random() < config.spline_mutation_rate:
+        if random.random() < config.spline_mutate_rate:
             if random.random() < config.spline_replace_rate:
                 # Complete replacement
                 self.value = random.gauss(config.spline_init_mean, config.spline_init_stdev)
             else:
                 # Small mutation
-                self.value += random.gauss(0, config.spline_mutation_power)
+                self.value += random.gauss(0, config.spline_mutate_power)
                 self.value = max(min(self.value, config.spline_max_value), config.spline_min_value)
             
     def __str__(self):
@@ -82,23 +83,23 @@ class KANConnectionGene(DefaultConnectionGene):
             
         # KAN-specific mutations
         # Mutate weight for spline
-        if random.random() < config.weight_s_mutation_rate:
+        if random.random() < config.weight_s_mutate_rate:
             if random.random() < config.weight_s_replace_rate:
                 # Complete replacement
                 self.weight_s = random.gauss(config.weight_s_init_mean, config.weight_s_init_stdev)
             else:
                 # Small mutation
-                self.weight_s += random.gauss(0, config.weight_s_mutation_power)
+                self.weight_s += random.gauss(0, config.weight_s_mutate_power)
                 self.weight_s = max(min(self.weight_s, config.weight_s_max_value), config.weight_s_min_value)
 
         # Mutate weight for a basis function
-        if random.random() < config.weight_b_mutation_rate:
+        if random.random() < config.weight_b_mutate_rate:
             if random.random() < config.weight_b_replace_rate:
                 # Complete replacement
                 self.weight_b = random.gauss(config.weight_b_init_mean, config.weight_b_init_stdev)
             else:
                 # Small mutation
-                self.weight_b += random.gauss(0, config.weight_b_mutation_power)
+                self.weight_b += random.gauss(0, config.weight_b_mutate_power)
                 self.weight_b = max(min(self.weight_b, config.weight_b_max_value), config.weight_b_min_value)
         
         # Mutate spline segments
@@ -278,16 +279,16 @@ class KANGenomeConfig(DefaultGenomeConfig):
             ConfigParameter('weight_s_coefficient_range', float, 5.0),
             ConfigParameter('weight_b_coefficient_range', float, 5.0),
             ConfigParameter('spline_coefficient_range', float, 5.0),
-            ConfigParameter('weight_s_mutation_rate', float, 0.1),
-            ConfigParameter('weight_s_mutation_power', float, 0.5),
+            ConfigParameter('weight_s_mutate_rate', float, 0.1),
+            ConfigParameter('weight_s_mutate_power', float, 0.5),
             ConfigParameter('weight_s_min_value', float, -5.0),
             ConfigParameter('weight_s_max_value', float, 5.0),
-            ConfigParameter('weight_b_mutation_rate', float, 0.1),
-            ConfigParameter('weight_b_mutation_power', float, 0.5),
+            ConfigParameter('weight_b_mutate_rate', float, 0.1),
+            ConfigParameter('weight_b_mutate_power', float, 0.5),
             ConfigParameter('weight_b_min_value', float, -5.0),
             ConfigParameter('weight_b_max_value', float, 5.0),
-            ConfigParameter('spline_mutation_rate', float, 0.2),
-            ConfigParameter('spline_mutation_power', float, 0.5),
+            ConfigParameter('spline_mutate_rate', float, 0.2),
+            ConfigParameter('spline_mutate_power', float, 0.5),
             ConfigParameter('spline_min_value', float, -5.0),
             ConfigParameter('spline_max_value', float, 5.0),
             ConfigParameter('spline_add_prob', float, 0.1),
@@ -351,6 +352,140 @@ class KANGenome(DefaultGenome):
             value = random.gauss(config.spline_init_mean, config.spline_init_stdev)
             conn.add_spline_segment(seg_key, grid_pos, value)
     
+    @staticmethod
+    def create_connection(config, input_id, output_id):
+        """
+        Creates a new connection gene between the specified nodes.
+        Initialize with KAN-specific attributes.
+        """
+        connection = config.connection_gene_type((input_id, output_id))
+        connection.init_attributes(config)
+        
+        # Explicitly initialize KAN-specific attributes
+        connection.weight_s = random.gauss(config.weight_s_init_mean, config.weight_s_init_stdev)
+        connection.weight_b = random.gauss(config.weight_b_init_mean, config.weight_b_init_stdev)
+        
+        return connection
+
+    def mutate_add_node(self, config):
+        """
+        Adds a new node by splitting an existing connection.
+        Uses weight_s and weight_b instead of weight.
+        """
+        if not self.connections:
+            if config.check_structural_mutation_surer():
+                self.mutate_add_connection(config)
+            return
+
+        # Choose a random connection to split
+        conn_to_split = random.choice(list(self.connections.values()))
+        new_node_id = config.get_new_node_key(self.nodes)
+        ng = self.create_node(config, new_node_id)
+        self.nodes[new_node_id] = ng
+
+        # Disable this connection and create two new connections joining its nodes via
+        # the given node.
+        conn_to_split.enabled = False
+
+        i, o = conn_to_split.key
+        
+        # Create input connection to the new node with default weights
+        self.add_connection(config, i, new_node_id, 1.0, 1.0, True)
+        
+        # Create output connection from the new node with the same weights as the split connection
+        self.add_connection(config, new_node_id, o, conn_to_split.weight_s, conn_to_split.weight_b, True)
+
+    def add_connection(self, config, input_key, output_key, weight_s=1.0, weight_b=0.0, enabled=True):
+        """
+        Adds a new connection between specified nodes with given weight_s and weight_b values.
+        """
+        assert isinstance(input_key, int)
+        assert isinstance(output_key, int)
+        assert output_key >= 0
+        assert isinstance(enabled, bool)
+        
+        key = (input_key, output_key)
+        connection = config.connection_gene_type(key)
+        connection.init_attributes(config)
+        
+        # Set the weights explicitly
+        connection.weight_s = weight_s
+        connection.weight_b = weight_b
+        connection.enabled = enabled
+        
+        # Initialize spline segments for the new connection
+        self.connections[key] = connection
+        self._initialize_connection_splines(connection, config)
+        
+        return connection
+
+    def mutate_add_connection(self, config):
+        """
+        Attempt to add a new connection, using weight_s and weight_b instead of weight.
+        The only restriction is that the output node cannot be one of the network input pins.
+        """
+        possible_outputs = list(self.nodes)
+        out_node = random.choice(possible_outputs)
+
+        possible_inputs = possible_outputs + config.input_keys
+        in_node = random.choice(possible_inputs)
+
+        # Don't duplicate connections.
+        key = (in_node, out_node)
+        if key in self.connections:
+            # Just enable the connection if it exists but is disabled
+            if config.check_structural_mutation_surer():
+                self.connections[key].enabled = True
+            return
+
+        # Don't allow connections between two output nodes
+        if in_node in config.output_keys and out_node in config.output_keys:
+            return
+
+        # For feed-forward networks, avoid creating cycles.
+        if config.feed_forward and creates_cycle(list(self.connections), key):
+            return
+
+        # Create the connection with default KAN values
+        weight_s = random.gauss(config.weight_s_init_mean, config.weight_s_init_stdev)
+        weight_b = random.gauss(config.weight_b_init_mean, config.weight_b_init_stdev)
+        
+        # Add the connection using our updated method
+        self.add_connection(config, in_node, out_node, weight_s, weight_b, True)
+
+    def mutate_delete_node(self, config):
+        """
+        Delete a node if possible. Returns the key of the deleted node or -1 if no node was deleted.
+        This method remains mostly unchanged as it doesn't directly interact with weights.
+        """
+        # Do nothing if there are no non-output nodes.
+        available_nodes = [k for k in self.nodes if k not in config.output_keys]
+        if not available_nodes:
+            return -1
+
+        del_key = random.choice(available_nodes)
+
+        connections_to_delete = set()
+        for k, v in self.connections.items():
+            if del_key in v.key:
+                connections_to_delete.add(v.key)
+
+        for key in connections_to_delete:
+            del self.connections[key]
+
+        del self.nodes[del_key]
+
+        return del_key
+
+    def mutate_delete_connection(self):
+        """
+        Delete a random connection if any exist.
+        This method doesn't need changes as it doesn't directly interact with weights.
+        """
+        if self.connections:
+            key = random.choice(list(self.connections.keys()))
+            del self.connections[key]
+
     def configure_crossover(self, parent1, parent2, config):
         """Configure this genome as a crossover of the two parent genomes."""
 
@@ -474,11 +609,6 @@ class KANGenome(DefaultGenome):
                 # Ensure max segments
                 if len(conn.spline_segments) > config.max_spline_segments:
                     self._reduce_to_max_spline_segments(conn, config)
-        
-        # TODO: Randomly delete some connections and hidden nodes
-        # for key in list(self.connections.keys()):
-        #     if random.random() < config.kan_connection_delete_rate:
-        #         del self.connections[key]
 
     
     def distance(self, other, config):

@@ -1,0 +1,24 @@
+Genome ID: 73
+Fitness: 1.320000000000001
+Nodes: 4
+Connections: 10
+Enabled connections: 10
+  Input Node: x (-1)
+  Input Node: dx (-2)
+  Input Node: theta (-3)
+  Input Node: dtheta (-4)
+  Hidden Node KANNodeGene(key=217, bias=-0.2421834790806549, response=1.0, activation=identity, aggregation=sum)
+  Hidden Node KANNodeGene(key=218, bias=2.809082641839985, response=1.0, activation=identity, aggregation=sum)
+  Hidden Node KANNodeGene(key=219, bias=-1.1951588913894784, response=1.0, activation=identity, aggregation=sum)
+  Output Node control (0): -0.460
+  Connection (-2, 219): 3 segments, weight_s=1.022, weight_b=1.023
+  Connection (-3, 219): 3 segments, weight_s=1.072, weight_b=1.017
+  Connection (-4, 217): 3 segments, weight_s=1.019, weight_b=0.879
+  Connection (-4, 219): 3 segments, weight_s=0.971, weight_b=1.052
+  Connection (-2, 218): 3 segments, weight_s=0.992, weight_b=0.897
+  Connection (-2, 217): 3 segments, weight_s=0.970, weight_b=0.773
+  Connection (-1, 219): 3 segments, weight_s=0.938, weight_b=1.062
+  Connection (-4, 0): 3 segments, weight_s=0.998, weight_b=0.996
+  Connection (-1, 218): 3 segments, weight_s=0.978, weight_b=0.706
+  Connection (-3, 0): 3 segments, weight_s=1.012, weight_b=0.929
+Total spline segments: 30

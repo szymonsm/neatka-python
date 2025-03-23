@@ -3,3 +3,22 @@ Fitness: 1.2000000000000008
 Nodes: 4
 Connections: 10
 Enabled connections: 10
+  Input Node: x (-1)
+  Input Node: dx (-2)
+  Input Node: theta (-3)
+  Input Node: dtheta (-4)
+  Hidden Node KANNodeGene(key=625, bias=1.4432519476097352, response=1.0, activation=identity, aggregation=sum): 1.443
+  Hidden Node KANNodeGene(key=626, bias=0.28504204950118917, response=1.0, activation=identity, aggregation=sum): 0.285
+  Hidden Node KANNodeGene(key=627, bias=-0.01962987587080708, response=1.0, activation=identity, aggregation=sum): -0.020
+  Output Node control (0): -0.263
+  Connection (-3, 627): 3 segments, weight_s=1.045, weight_b=1.032
+  Connection (-1, 627): 3 segments, weight_s=1.026, weight_b=0.950
+  Connection (-1, 0): 3 segments, weight_s=1.024, weight_b=0.967
+  Connection (-4, 0): 3 segments, weight_s=0.879, weight_b=1.123
+  Connection (-3, 626): 3 segments, weight_s=1.009, weight_b=1.029
+  Connection (-4, 625): 3 segments, weight_s=0.942, weight_b=0.984
+  Connection (-2, 627): 3 segments, weight_s=1.065, weight_b=0.922
+  Connection (-2, 626): 3 segments, weight_s=1.112, weight_b=0.965
+  Connection (-4, 627): 3 segments, weight_s=1.073, weight_b=0.901
+  Connection (-4, 626): 3 segments, weight_s=1.199, weight_b=1.006
+Total spline segments: 30

@@ -136,12 +136,12 @@ def analyze_kan_genome(genome, config, node_names=None):
 
     # Print node information
     for k in config.input_keys:
-        print(f"  Input Node: {node_names.get(k, str(k))} ({k}): {genome.nodes[k].bias:.3f}")
+        print(f"  Input Node: {node_names.get(k, str(k))} ({k})")
     
     # Print hidden Node information
     for k in genome.nodes.keys():
         if k not in config.input_keys and k not in config.output_keys:
-            print(f"  Hidden Node {genome.nodes[k]}: {genome.nodes[k].bias:.3f}")
+            print(f"  Hidden Node {genome.nodes[k]}")
 
     # Print output node information
     for k in config.output_keys:

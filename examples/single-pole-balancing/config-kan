@@ -2,14 +2,14 @@
 
 [NEAT]
 fitness_criterion     = max
-fitness_threshold     = 1
+fitness_threshold     = 10
 pop_size              = 250
 reset_on_extinction   = 0
 
 [KANGenome]
 # Network parameters
 num_inputs            = 4
-num_hidden            = 3
+num_hidden            = 2
 num_outputs           = 1
 initial_connection    = partial_direct 0.5
 feed_forward          = True

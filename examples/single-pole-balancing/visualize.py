@@ -147,12 +147,12 @@ def draw_kan_net(config, genome, view=False, filename=None, node_names=None, sho
     for k in config.genome_config.input_keys:
         dot.node(node_names.get(k, str(k)), label=f"{node_names.get(k, str(k))}", style='filled', shape='box', fillcolor=node_colors.get(k, 'lightgray'))
     for k in config.genome_config.output_keys:
-        dot.node(node_names.get(k, str(k)), label=f"{node_names.get(k, str(k))}", style='filled', fillcolor=node_colors.get(k, 'lightblue'))
+        dot.node(node_names.get(k, str(k)), label=f"{node_names.get(k, str(k))}\nb={genome.nodes.get(k, str(k)).bias:.2f}", style='filled', fillcolor=node_colors.get(k, 'lightblue'))
     
     # Draw hidden nodes
     for n in genome.nodes.keys():
         if n not in config.genome_config.input_keys and n not in config.genome_config.output_keys:
-            dot.node(str(n), label=f"ID:{str(n)}\n∑\nb={genome.nodes[k].bias}", style='filled', fillcolor=node_colors.get(n, 'white'))
+            dot.node(str(n), label=f"ID:{str(n)}\n∑\nb={genome.nodes[k].bias:.2f}", style='filled', fillcolor=node_colors.get(n, 'white'))
     
     # Draw connections, including KAN-specific splines
     for cg in genome.connections.values():

@@ -1,3 +1,0 @@
-Runtime: 84.30 seconds
-Generations: 26
-Date: 2025-03-22 20:05:56
