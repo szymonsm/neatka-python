@@ -1,4 +1,3 @@
-# import torch
 import random
 import numpy as np
 from neat.genome import DefaultGenome, DefaultGenomeConfig
@@ -65,17 +64,15 @@ class KANConnectionGene(DefaultConnectionGene):
     
     Represents a spline-based connection between nodes.
     """
-    _gene_attributes = [FloatAttribute('weight'),
-                       BoolAttribute('enabled'),
-                       FloatAttribute('scale'),
-                       FloatAttribute('bias')]
+    _gene_attributes = [BoolAttribute('enabled'),
+                       FloatAttribute('weight_s'),
+                       FloatAttribute('weight_b')]
     
-    def __init__(self, key, weight=0.0, enabled=True, scale=1.0, bias=0.0):
+    def __init__(self, key, enabled=True, weight_s=1.0, weight_b=1.0):
         super().__init__(key)
-        self.weight = weight
         self.enabled = enabled
-        self.scale = scale
-        self.bias = bias
+        self.weight_s = weight_s
+        self.weight_b = weight_b
         self.spline_segments = {}  # Dictionary mapping segment keys to SplineSegmentGenes
         
     def mutate(self, config):
@@ -84,25 +81,25 @@ class KANConnectionGene(DefaultConnectionGene):
         super().mutate(config)
             
         # KAN-specific mutations
-        # Mutate scale
-        if random.random() < config.scale_mutation_rate:
-            if random.random() < config.scale_replace_rate:
+        # Mutate weight for spline
+        if random.random() < config.weight_s_mutation_rate:
+            if random.random() < config.weight_s_replace_rate:
                 # Complete replacement
-                self.scale = random.gauss(config.scale_init_mean, config.scale_init_stdev)
+                self.weight_s = random.gauss(config.weight_s_init_mean, config.weight_s_init_stdev)
             else:
                 # Small mutation
-                self.scale += random.gauss(0, config.scale_mutation_power)
-                self.scale = max(min(self.scale, config.scale_max_value), config.scale_min_value)
-            
-        # Mutate bias
-        if random.random() < config.kan_bias_mutation_rate:
-            if random.random() < config.kan_bias_replace_rate:
+                self.weight_s += random.gauss(0, config.weight_s_mutation_power)
+                self.weight_s = max(min(self.weight_s, config.weight_s_max_value), config.weight_s_min_value)
+
+        # Mutate weight for a basis function
+        if random.random() < config.weight_b_mutation_rate:
+            if random.random() < config.weight_b_replace_rate:
                 # Complete replacement
-                self.bias = random.gauss(config.kan_bias_init_mean, config.kan_bias_init_stdev)
+                self.weight_b = random.gauss(config.weight_b_init_mean, config.weight_b_init_stdev)
             else:
                 # Small mutation
-                self.bias += random.gauss(0, config.kan_bias_mutation_power)
-                self.bias = max(min(self.bias, config.kan_bias_max_value), config.kan_bias_min_value)
+                self.weight_b += random.gauss(0, config.weight_b_mutation_power)
+                self.weight_b = max(min(self.weight_b, config.weight_b_max_value), config.weight_b_min_value)
         
         # Mutate spline segments
         for segment in list(self.spline_segments.values()):
@@ -180,13 +177,13 @@ class KANConnectionGene(DefaultConnectionGene):
     def distance(self, other, config):
         """Return the genetic distance between this connection gene and the other."""
         # Start with the standard connection distance (weight and enabled)
-        d = abs(self.weight - other.weight) / config.weight_max_value
+        d = 0.0
         if self.enabled != other.enabled:
             d += 1.0
             
         # Add distance for KAN-specific attributes
-        d += abs(self.scale - other.scale) / config.scale_coefficient_range
-        d += abs(self.bias - other.bias) / config.bias_coefficient_range
+        d += abs(self.weight_s - other.weight_s) / config.weight_s_coefficient_range
+        d += abs(self.weight_b - other.weight_b) / config.weight_b_coefficient_range
         
         # Calculate spline segment distance
         spline_dist = 0.0
@@ -221,7 +218,7 @@ class KANConnectionGene(DefaultConnectionGene):
     
     def copy(self):
         """Return a copy of this gene with copied spline segments."""
-        new_gene = KANConnectionGene(self.key, self.weight, self.enabled, self.scale, self.bias)
+        new_gene = KANConnectionGene(self.key, self.enabled, self.weight_s, self.weight_b)
         
         # Copy spline segments
         for key, seg in self.spline_segments.items():
@@ -267,28 +264,28 @@ class KANGenomeConfig(DefaultGenomeConfig):
         # Additional KAN-specific parameters
         kan_params = [
             # KAN initialization parameters
-            ConfigParameter('scale_init_mean', float, 1.0),
-            ConfigParameter('scale_init_stdev', float, 0.1),
-            ConfigParameter('scale_replace_rate', float, 0.1),
-            ConfigParameter('kan_bias_init_mean', float, 0.0),
-            ConfigParameter('kan_bias_init_stdev', float, 0.1),
-            ConfigParameter('kan_bias_replace_rate', float, 0.1),
+            ConfigParameter('weight_s_init_mean', float, 1.0),
+            ConfigParameter('weight_s_init_stdev', float, 0.1),
+            ConfigParameter('weight_s_replace_rate', float, 0.1),
+            ConfigParameter('weight_b_init_mean', float, 0.0),
+            ConfigParameter('weight_b_init_stdev', float, 0.1),
+            ConfigParameter('weight_b_replace_rate', float, 0.1),
             ConfigParameter('spline_init_mean', float, 0.0),
             ConfigParameter('spline_init_stdev', float, 0.1),
             ConfigParameter('spline_replace_rate', float, 0.1),
             
             # Other KAN parameters
-            ConfigParameter('scale_coefficient_range', float, 5.0),
-            ConfigParameter('bias_coefficient_range', float, 5.0),
+            ConfigParameter('weight_s_coefficient_range', float, 5.0),
+            ConfigParameter('weight_b_coefficient_range', float, 5.0),
             ConfigParameter('spline_coefficient_range', float, 5.0),
-            ConfigParameter('scale_mutation_rate', float, 0.1),
-            ConfigParameter('scale_mutation_power', float, 0.5),
-            ConfigParameter('scale_min_value', float, -5.0),
-            ConfigParameter('scale_max_value', float, 5.0),
-            ConfigParameter('kan_bias_mutation_rate', float, 0.1),
-            ConfigParameter('kan_bias_mutation_power', float, 0.5),
-            ConfigParameter('kan_bias_min_value', float, -5.0),
-            ConfigParameter('kan_bias_max_value', float, 5.0),
+            ConfigParameter('weight_s_mutation_rate', float, 0.1),
+            ConfigParameter('weight_s_mutation_power', float, 0.5),
+            ConfigParameter('weight_s_min_value', float, -5.0),
+            ConfigParameter('weight_s_max_value', float, 5.0),
+            ConfigParameter('weight_b_mutation_rate', float, 0.1),
+            ConfigParameter('weight_b_mutation_power', float, 0.5),
+            ConfigParameter('weight_b_min_value', float, -5.0),
+            ConfigParameter('weight_b_max_value', float, 5.0),
             ConfigParameter('spline_mutation_rate', float, 0.2),
             ConfigParameter('spline_mutation_power', float, 0.5),
             ConfigParameter('spline_min_value', float, -5.0),
@@ -330,8 +327,8 @@ class KANGenome(DefaultGenome):
         # Configure initial splines for all connections
         for conn_key, conn in self.connections.items():
             # Initialize scale and bias with configured values
-            conn.scale = random.gauss(config.scale_init_mean, config.scale_init_stdev)
-            conn.bias = random.gauss(config.kan_bias_init_mean, config.kan_bias_init_stdev)
+            conn.weight_s = random.gauss(config.weight_s_init_mean, config.weight_s_init_stdev)
+            conn.weight_b = random.gauss(config.weight_b_init_mean, config.weight_b_init_stdev)
             
             # Create initial spline segments
             self._initialize_connection_splines(conn, config)
@@ -356,11 +353,6 @@ class KANGenome(DefaultGenome):
     
     def configure_crossover(self, parent1, parent2, config):
         """Configure this genome as a crossover of the two parent genomes."""
-        # super().configure_crossover(parent1, parent2, config)
-        # if genome1.fitness > genome2.fitness:
-        #     parent1, parent2 = genome1, genome2
-        # else:
-        #     parent1, parent2 = genome2, genome1
 
         better_parent = parent1 if parent1.fitness > parent2.fitness else parent2
         worse_parent = parent1 if parent1.fitness <= parent2.fitness else parent2
@@ -397,37 +389,6 @@ class KANGenome(DefaultGenome):
             else:
                 # Homologous gene: combine genes from both parents.
                 self.nodes[key] = ng1.crossover(ng2)
-        
-        # Handle KAN-specific attributes for connections
-        # for conn_key, conn in self.connections.items():
-        #     # Check if this connection exists in either parent
-        #     p1_conn = better_parent.connections.get(conn_key)
-        #     p2_conn = worse_parent.connections.get(conn_key)
-            
-        #     if p1_conn and p2_conn:
-
-        #         new_conn = p1_conn.crossover(p2_conn, config)
-        #         self.connections[conn_key] = new_conn
-                
-        #     elif p1_conn:
-        #         self.connections[conn_key] = p1_conn.copy()
-                    
-        #     elif p2_conn:
-        #         self.connections[conn_key] = p2_conn.copy()
-                    
-        #     else:  # New connection
-        #         # Initialize with default spline segments
-        #         self._initialize_connection_splines(conn, config)
-                
-            # IMPORTANT FIX: Ensure connection has at least min_spline_segments
-            # if len(conn.spline_segments) < config.min_spline_segments:
-            #     # Add segments until we reach minimum
-            #     self._ensure_min_spline_segments(conn, config)
-                
-            # # IMPORTANT FIX: Ensure connection doesn't exceed max_spline_segments
-            # if len(conn.spline_segments) > config.max_spline_segments:
-            #     # Remove excess segments, keeping the ones with highest absolute values
-            #     self._reduce_to_max_spline_segments(conn, config)
     
     def _ensure_min_spline_segments(self, conn, config):
         """Ensure a connection has at least min_spline_segments."""
@@ -518,7 +479,6 @@ class KANGenome(DefaultGenome):
         # for key in list(self.connections.keys()):
         #     if random.random() < config.kan_connection_delete_rate:
         #         del self.connections[key]
-
 
     
     def distance(self, other, config):

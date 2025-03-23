@@ -159,11 +159,11 @@ def visualize_results(winner, stats, config, results_dir):
     """Generate all visualizations and save them in the results directory."""
     print("Plotting statistics...")
     if stats.generation_statistics:  # Check if we have valid statistics
-        stats_path = os.path.join(results_dir, "fitness.svg")
+        stats_path = os.path.join(results_dir, "fitness.png")
         visualize.plot_stats(stats, ylog=True, view=False, filename=stats_path)
         
         print("Plotting species...")
-        species_path = os.path.join(results_dir, "speciation.svg")
+        species_path = os.path.join(results_dir, "speciation.png")
         visualize.plot_species(stats, view=False, filename=species_path)
     else:
         print("No statistics available to plot")
@@ -188,12 +188,6 @@ def visualize_results(winner, stats, config, results_dir):
     visualize_kan.plot_kan_splines(winner, config.genome_config, 
                                   filename=splines_path, view=False)
     
-    # Plot KAN network with splines
-    # print("Plotting KAN network with splines...")
-    # kan_net_path = os.path.join(results_dir, "kan-network.svg")
-    # visualize_kan.draw_kan_network_with_splines(winner, config, 
-    #                                           filename=kan_net_path, view=False)
-    
     # Analyze the genome and save to file
     print("Analyzing genome...")
     analysis_path = os.path.join(results_dir, "genome_analysis.txt")
@@ -203,7 +197,7 @@ def visualize_results(winner, stats, config, results_dir):
         original_stdout = sys.stdout
         sys.stdout = f
         
-        visualize_kan.analyze_kan_genome(winner, config.genome_config)
+        visualize_kan.analyze_kan_genome(winner, config.genome_config, node_names)
         
         # Restore stdout
         sys.stdout = original_stdout

@@ -123,7 +123,7 @@ def plot_kan_splines(genome, config, filename="kan_splines.png", view=False):
     else:
         plt.close()
 
-def analyze_kan_genome(genome, config):
+def analyze_kan_genome(genome, config, node_names=None):
     """Print detailed information about a KAN genome."""
     print(f"Genome ID: {genome.key}")
     print(f"Fitness: {genome.fitness}")
@@ -133,6 +133,19 @@ def analyze_kan_genome(genome, config):
     # Count enabled connections
     enabled_connections = [c for c in genome.connections.values() if c.enabled]
     print(f"Enabled connections: {len(enabled_connections)}")
+
+    # Print node information
+    for k in config.input_keys:
+        print(f"  Input Node: {node_names.get(k, str(k))} ({k}): {genome.nodes[k].bias:.3f}")
+    
+    # Print hidden Node information
+    for k in genome.nodes.keys():
+        if k not in config.input_keys and k not in config.output_keys:
+            print(f"  Hidden Node {genome.nodes[k]}: {genome.nodes[k].bias:.3f}")
+
+    # Print output node information
+    for k in config.output_keys:
+        print(f"  Output Node {node_names.get(k, str(k))} ({k}): {genome.nodes[k].bias:.3f}")
     
     # Print spline information
     total_segments = 0
@@ -140,7 +153,7 @@ def analyze_kan_genome(genome, config):
         if conn.enabled:
             n_segments = len(conn.spline_segments)
             total_segments += n_segments
-            print(f"  Connection {key}: {n_segments} segments, weight={conn.weight:.3f}, scale={conn.scale:.3f}, bias={conn.bias:.3f}")
+            print(f"  Connection {key}: {n_segments} segments, weight_s={conn.weight_s:.3f}, weight_b={conn.weight_b:.3f}")
     
     print(f"Total spline segments: {total_segments}")
     

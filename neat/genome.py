@@ -612,16 +612,16 @@ def get_pruned_genes(node_genes, connection_genes, input_keys, output_keys):
 #             ConfigParameter('scale_coefficient_range', float, 5.0),
 #             ConfigParameter('bias_coefficient_range', float, 5.0),
 #             ConfigParameter('spline_coefficient_range', float, 5.0),
-#             ConfigParameter('scale_mutation_rate', float, 0.1),
-#             ConfigParameter('scale_mutation_power', float, 0.5),
+#             ConfigParameter('scale_mutate_rate', float, 0.1),
+#             ConfigParameter('scale_mutate_power', float, 0.5),
 #             ConfigParameter('scale_min_value', float, -5.0),
 #             ConfigParameter('scale_max_value', float, 5.0),
-#             ConfigParameter('bias_mutation_rate', float, 0.1),
-#             ConfigParameter('bias_mutation_power', float, 0.5),
+#             ConfigParameter('bias_mutate_rate', float, 0.1),
+#             ConfigParameter('bias_mutate_power', float, 0.5),
 #             ConfigParameter('bias_min_value', float, -5.0),
 #             ConfigParameter('bias_max_value', float, 5.0),
-#             ConfigParameter('spline_mutation_rate', float, 0.1),
-#             ConfigParameter('spline_mutation_power', float, 0.5),
+#             ConfigParameter('spline_mutate_rate', float, 0.1),
+#             ConfigParameter('spline_mutate_power', float, 0.5),
 #             ConfigParameter('spline_min_value', float, -5.0),
 #             ConfigParameter('spline_max_value', float, 5.0),
 #             ConfigParameter('spline_add_prob', float, 0.1),
@@ -733,18 +733,18 @@ def get_pruned_genes(node_genes, connection_genes, input_keys, output_keys):
 #         # Additional mutations for KAN-specific elements
 #         for conn_key, conn in self.connections.items():
 #             # Mutate scale and bias
-#             if random() < config.genome_config.scale_mutation_rate:
-#                 conn.scale += gauss(0, config.genome_config.scale_mutation_power)
+#             if random() < config.genome_config.scale_mutate_rate:
+#                 conn.scale += gauss(0, config.genome_config.scale_mutate_power)
 #                 conn.scale = max(min(conn.scale, config.genome_config.scale_max_value), config.genome_config.scale_min_value)
                 
-#             if random() < config.genome_config.bias_mutation_rate:
-#                 conn.bias += gauss(0, config.genome_config.bias_mutation_power)
+#             if random() < config.genome_config.bias_mutate_rate:
+#                 conn.bias += gauss(0, config.genome_config.bias_mutate_power)
 #                 conn.bias = max(min(conn.bias, config.genome_config.bias_max_value), config.genome_config.bias_min_value)
             
 #             # Mutate existing spline segments
 #             for grid_pos, segment in list(conn.spline_segments.items()):
-#                 if random() < config.genome_config.spline_mutation_rate:
-#                     segment.value += gauss(0, config.genome_config.spline_mutation_power)
+#                 if random() < config.genome_config.spline_mutate_rate:
+#                     segment.value += gauss(0, config.genome_config.spline_mutate_power)
 #                     segment.value = max(min(segment.value, config.genome_config.spline_max_value), 
 #                                         config.genome_config.spline_min_value)
             

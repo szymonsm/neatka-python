@@ -173,19 +173,19 @@ class KANConnectionGene(DefaultConnectionGene):
         super().mutate(config)
         
         # Mutate scale
-        if random() < config.scale_mutation_rate:
-            self.scale += gauss(0, config.scale_mutation_power)
+        if random() < config.scale_mutate_rate:
+            self.scale += gauss(0, config.scale_mutate_power)
             self.scale = max(min(self.scale, config.scale_max_value), config.scale_min_value)
             
         # Mutate bias
-        if random() < config.kan_bias_mutation_rate:
-            self.bias += gauss(0, config.kan_bias_mutation_power)
+        if random() < config.kan_bias_mutate_rate:
+            self.bias += gauss(0, config.kan_bias_mutate_power)
             self.bias = max(min(self.bias, config.kan_bias_max_value), config.kan_bias_min_value)
         
         # Mutate spline segments
         for key, segment in self.spline_segments.items():
-            if random() < config.spline_mutation_rate:
-                segment.value += gauss(0, config.spline_mutation_power)
+            if random() < config.spline_mutate_rate:
+                segment.value += gauss(0, config.spline_mutate_power)
                 segment.value = max(min(segment.value, config.spline_max_value), config.spline_min_value)
                 
     def add_spline_segment(self, key, grid_position, value=None):

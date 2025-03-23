@@ -145,14 +145,14 @@ def draw_kan_net(config, genome, view=False, filename=None, node_names=None, sho
                 spline_plots[cg.key] = spline_img_path
     # Draw input and output nodes
     for k in config.genome_config.input_keys:
-        dot.node(node_names.get(k, str(k)), style='filled', shape='box', fillcolor=node_colors.get(k, 'lightgray'))
+        dot.node(node_names.get(k, str(k)), label=f"{node_names.get(k, str(k))}", style='filled', shape='box', fillcolor=node_colors.get(k, 'lightgray'))
     for k in config.genome_config.output_keys:
-        dot.node(node_names.get(k, str(k)), style='filled', fillcolor=node_colors.get(k, 'lightblue'))
+        dot.node(node_names.get(k, str(k)), label=f"{node_names.get(k, str(k))}", style='filled', fillcolor=node_colors.get(k, 'lightblue'))
     
     # Draw hidden nodes
     for n in genome.nodes.keys():
         if n not in config.genome_config.input_keys and n not in config.genome_config.output_keys:
-            dot.node(str(n), label=f"ID:{str(n)}\n∑", style='filled', fillcolor=node_colors.get(n, 'white'))
+            dot.node(str(n), label=f"ID:{str(n)}\n∑\nb={genome.nodes[k].bias}", style='filled', fillcolor=node_colors.get(n, 'white'))
     
     # Draw connections, including KAN-specific splines
     for cg in genome.connections.values():
@@ -170,7 +170,6 @@ def draw_kan_net(config, genome, view=False, filename=None, node_names=None, sho
                 # If we have a spline plot image, use it in the node
                 if cg.key in spline_plots:
                     dot.node(spline_node, 
-                            #  label=f"SPLINE\n{len(cg.spline_segments)} segments",
                              label='',
                              style='filled', 
                              shape='box', 
@@ -194,15 +193,15 @@ def draw_kan_net(config, genome, view=False, filename=None, node_names=None, sho
                 dot.edge(a, spline_node, style='solid')
                 dot.edge(spline_node, b, 
                          style='solid' if cg.enabled else 'dotted', 
-                         color='green' if cg.weight > 0 else 'red', 
-                         penwidth=str(0.1 + abs(cg.weight)),
-                         label=f"w={cg.weight:.2f}\ns={cg.scale:.2f}\nb={cg.bias:.2f}")
+                         color='green' if cg.weight_s > 0 else 'red', 
+                         penwidth=str(0.1 + abs(cg.weight_s)),
+                         label=f"weight_s={cg.weight_s:.2f}\nweight_b={cg.weight_b:.2f}")
             else:
                 # Regular connection
                 dot.edge(a, b, 
                          style='solid' if cg.enabled else 'dotted', 
-                         color='green' if cg.weight > 0 else 'red', 
-                         penwidth=str(0.1 + abs(cg.weight / 5.0)))
+                         color='green' if cg.weight_s > 0 else 'red', 
+                         penwidth=str(0.1 + abs(cg.weight_s / 5.0)))
     
     if filename:
         dot.render(filename, view=view, format=fmt, cleanup=True)

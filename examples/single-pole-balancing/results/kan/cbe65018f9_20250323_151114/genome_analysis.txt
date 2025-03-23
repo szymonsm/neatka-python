@@ -1,0 +1,5 @@
+Genome ID: 209
+Fitness: 1.2000000000000008
+Nodes: 4
+Connections: 10
+Enabled connections: 10

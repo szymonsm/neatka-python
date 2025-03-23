@@ -92,12 +92,13 @@ class KANNetwork:
             node_sum = 0.0
             
             # Apply spline functions to inputs and sum the results
-            for input_node, spline_func, weight, scale, bias in node_inputs:
+            for input_node, spline_func, weight_s, weight_b in node_inputs:
                 x = self.values[input_node]
                 # Apply the spline transformation
-                y = spline_func(x)
+                # y = spline_func(x)
                 # Apply scaling, bias, and weight
-                transformed_value = weight * (scale * y + bias)
+                transformed_value = weight_b * (x / (1 + np.exp(-x))) + weight_s * spline_func(x)
+                # transformed_value = weight * (scale * y + bias)
                 node_sum += transformed_value
                 
             # Store the summed value
@@ -142,7 +143,7 @@ class KANNetwork:
                     spline_func = SplineFunctionImpl(control_points)
                     
                     # Add connection info to node inputs
-                    node_inputs.append((in_node, spline_func, conn.weight, conn.scale, conn.bias))
+                    node_inputs.append((in_node, spline_func, conn.weight_s, conn.weight_b))
                 
                 # Add node evaluation info
                 node_evals.append((node, node_inputs))
