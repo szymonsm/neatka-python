@@ -1,0 +1,13 @@
+Balance time: 120.0 seconds
+
+Initial conditions:
+        x = 0.8266
+    x_dot = -0.1589
+    theta = 0.2026
+theta_dot = -0.4822
+
+Final conditions:
+        x = 1.6310
+    x_dot = -0.0465
+    theta = 0.0016
+theta_dot = 0.0551
