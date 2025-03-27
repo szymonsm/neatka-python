@@ -173,8 +173,9 @@ class DefaultReproduction(DefaultClassConfig):
             while spawn > 0:
                 spawn -= 1
 
-                parent1_id, parent1 = random.choice(old_members)
-                parent2_id, parent2 = random.choice(old_members)
+                # Random choice based on fitness.
+                parent1_id, parent1 = random.choices(old_members, weights=[m.fitness for i, m in old_members])[0]
+                parent2_id, parent2 = random.choices(old_members, weights=[m.fitness for i, m in old_members])[0]
 
                 # Note that if the parents are not distinct, crossover will produce a
                 # genetically identical clone of the parent (but with a different ID).

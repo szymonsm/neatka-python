@@ -1,0 +1,14 @@
+Genome ID: 12823
+Fitness: 4.239999999999954
+Nodes: 1
+Connections: 3
+Enabled connections: 3
+  Input Node: x (-1)
+  Input Node: dx (-2)
+  Input Node: theta (-3)
+  Input Node: dtheta (-4)
+  Output Node control (0): -1.390
+  Connection (-3, 0): 10 segments, weight_s=1.033, weight_b=0.879
+  Connection (-1, 0): 7 segments, weight_s=0.761, weight_b=0.497
+  Connection (-4, 0): 10 segments, weight_s=1.097, weight_b=0.927
+Total spline segments: 27

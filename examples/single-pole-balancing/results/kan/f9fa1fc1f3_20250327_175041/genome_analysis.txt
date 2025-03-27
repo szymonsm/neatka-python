@@ -1,0 +1,20 @@
+Genome ID: 11172
+Fitness: 6.629999999999903
+Nodes: 4
+Connections: 6
+Enabled connections: 6
+  Input Node: x (-1)
+  Input Node: dx (-2)
+  Input Node: theta (-3)
+  Input Node: dtheta (-4)
+  Hidden Node KANNodeGene(key=289, bias=-1.484903618643854, response=1.0, activation=identity, aggregation=sum)
+  Hidden Node KANNodeGene(key=1194, bias=-0.5381392314004546, response=1.0, activation=identity, aggregation=sum)
+  Hidden Node KANNodeGene(key=1445, bias=-0.9217137518786576, response=1.0, activation=identity, aggregation=sum)
+  Output Node control (0): 0.655
+  Connection (-3, 0): 8 segments, weight_s=0.749, weight_b=2.159
+  Connection (-4, 289): 9 segments, weight_s=0.693, weight_b=1.030
+  Connection (289, 1445): 4 segments, weight_s=0.795, weight_b=2.584
+  Connection (1445, 0): 5 segments, weight_s=1.423, weight_b=1.498
+  Connection (-3, 1445): 4 segments, weight_s=0.914, weight_b=0.329
+  Connection (-2, 0): 4 segments, weight_s=1.009, weight_b=1.523
+Total spline segments: 34

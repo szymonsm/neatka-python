@@ -28,6 +28,8 @@ def eval_genome(genome, config):
     fitnesses = []
 
     for runs in range(runs_per_net):
+        random.seed(runs)
+        np.random.seed(runs)
         sim = cart_pole.CartPole()
 
         # Run the given simulation for up to num_steps time steps.

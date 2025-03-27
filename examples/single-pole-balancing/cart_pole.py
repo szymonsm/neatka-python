@@ -3,7 +3,8 @@ General settings and implementation of the single-pole cart system dynamics.
 """
 
 from math import cos, pi, sin
-from random import uniform, gauss
+import random
+random.seed(0)
 
 
 class CartPole(object):
@@ -19,16 +20,16 @@ class CartPole(object):
         self.angle_limit_radians = angle_limit_radians
 
         if x is None:
-            x = uniform(-0.5 * self.position_limit, 0.5 * self.position_limit)
+            x = random.uniform(-0.5 * self.position_limit, 0.5 * self.position_limit)
 
         if theta is None:
-            theta = uniform(-0.5 * self.angle_limit_radians, 0.5 * self.angle_limit_radians)
+            theta = random.uniform(-0.5 * self.angle_limit_radians, 0.5 * self.angle_limit_radians)
 
         if dx is None:
-            dx = uniform(-1.0, 1.0)
+            dx = random.uniform(-1.0, 1.0)
 
         if dtheta is None:
-            dtheta = uniform(-1.0, 1.0)
+            dtheta = random.uniform(-1.0, 1.0)
 
         self.t = 0.0
         self.x = x
@@ -92,7 +93,7 @@ def continuous_actuator_force(action):
 
 
 def noisy_continuous_actuator_force(action):
-    a = action[0] + gauss(0, 0.2)
+    a = action[0] + random.gauss(0, 0.2)
     return 10.0 if a > 0.5 else -10.0
 
 
@@ -101,5 +102,5 @@ def discrete_actuator_force(action):
 
 
 def noisy_discrete_actuator_force(action):
-    a = action[0] + gauss(0, 0.2)
+    a = action[0] + random.gauss(0, 0.2)
     return 10.0 if a > 0.5 else -10.0
