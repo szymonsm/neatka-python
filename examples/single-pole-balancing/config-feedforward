@@ -10,7 +10,7 @@ reset_on_extinction   = 0
 
 [DefaultGenome]
 num_inputs              = 4
-num_hidden              = 1
+num_hidden              = 2
 num_outputs             = 1
 initial_connection      = partial_direct 0.5
 feed_forward            = True
@@ -59,6 +59,6 @@ species_fitness_func = max
 max_stagnation  = 20
 
 [DefaultReproduction]
-elitism            = 2
+elitism            = 5
 survival_threshold = 0.2
 

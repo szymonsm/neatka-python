@@ -1,5 +1,6 @@
 """
-Single-pole balancing experiment using a Kolmogorov-Arnold Network (KAN).
+Single-pole balancing experiment using either a standard feedforward neural network
+or a Kolmogorov-Arnold Network (KAN).
 """
 
 import multiprocessing
@@ -12,18 +13,33 @@ import numpy as np
 
 import cart_pole
 import neat
-from neat.nn.kan import KANNetwork
-from neat.kan_genome import KANGenome
 import visualize
 import results_manager
+
+# Import KAN-specific modules conditionally
+try:
+    from neat.nn.kan import KANNetwork
+    from neat.kan_genome import KANGenome
+    KAN_AVAILABLE = True
+except ImportError:
+    KAN_AVAILABLE = False
 
 runs_per_net = 5
 simulation_seconds = 60.0
 
-# Use the KAN network phenotype and the discrete actuator force function.
-def eval_genome(genome, config):
-    net = KANNetwork.create(genome, config)
+# Define separate evaluation functions for each network type
+def eval_feedforward_genome(genome, config):
+    """Evaluate a feedforward genome."""
+    net = neat.nn.FeedForwardNetwork.create(genome, config)
+    return _run_simulation(net)
 
+def eval_kan_genome(genome, config):
+    """Evaluate a KAN genome."""
+    net = KANNetwork.create(genome, config)
+    return _run_simulation(net)
+
+def _run_simulation(net):
+    """Run the cart-pole simulation with the given network."""
     fitnesses = []
 
     for runs in range(runs_per_net):
@@ -31,7 +47,7 @@ def eval_genome(genome, config):
         np.random.seed(runs)
         sim = cart_pole.CartPole()
 
-        # Run the given simulation for up to num_steps time steps.
+        # Run the simulation for up to simulation_seconds time steps
         fitness = 0.0
         while sim.t < simulation_seconds:
             inputs = sim.get_scaled_state()
@@ -41,9 +57,7 @@ def eval_genome(genome, config):
             force = cart_pole.discrete_actuator_force(action)
             sim.step(force)
 
-            # Stop if the network fails to keep the cart within the position or angle limits.
-            # The per-run fitness is the number of time steps the network can balance the pole
-            # without exceeding these limits.
+            # Stop if the network fails to keep the cart within limits
             if abs(sim.x) >= sim.position_limit or abs(sim.theta) >= sim.angle_limit_radians:
                 break
 
@@ -51,29 +65,47 @@ def eval_genome(genome, config):
 
         fitnesses.append(fitness)
 
-    # The genome's fitness is its worst performance across all runs.
+    # The genome's fitness is its worst performance across all runs
     return min(fitnesses)
 
-def eval_genomes(genomes, config):
-    for genome_id, genome in genomes:
-        genome.fitness = eval_genome(genome, config)
-
-def run(seed=None, num_generations=100):
-    """Run the experiment with optional seed for reproducibility."""
+def run(net_type='feedforward', seed=None, num_generations=100):
+    """
+    Run evolution with the specified network type.
+    
+    Args:
+        net_type: Type of network to use ('feedforward' or 'kan')
+        seed: Random seed for reproducibility (default: None)
+        num_generations: Number of generations to run (default: 100)
+        
+    Returns:
+        The winning genome
+    """
+    # Validate network type
+    if net_type.lower() == 'kan' and not KAN_AVAILABLE:
+        raise ImportError("KAN network type requested but KAN modules not available")
+    
     # Set seed if provided
     if seed is not None:
         random.seed(seed)
         np.random.seed(seed)
         
-    # Load the config file
+    # Load the appropriate config file
     local_dir = os.path.dirname(__file__)
-    config_path = os.path.join(local_dir, 'config-kan')
-    config = neat.Config(KANGenome, neat.DefaultReproduction,
-                         neat.DefaultSpeciesSet, neat.DefaultStagnation,
-                         config_path)
+    config_path = os.path.join(local_dir, f'config-{net_type.lower()}')
     
-    # Set up results directory
-    results_dir, run_id, is_new_run = results_manager.setup_results_directory(config, seed=seed)
+    # Use appropriate genome type based on network type
+    if net_type.lower() == 'feedforward':
+        config = neat.Config(neat.DefaultGenome, neat.DefaultReproduction,
+                             neat.DefaultSpeciesSet, neat.DefaultStagnation,
+                             config_path)
+    else:
+        config = neat.Config(KANGenome, neat.DefaultReproduction,
+                             neat.DefaultSpeciesSet, neat.DefaultStagnation,
+                             config_path)
+    
+    # Set up results directory - use network type as experiment name
+    results_dir, run_id, is_new_run = results_manager.setup_results_directory(
+        config, experiment_name=net_type.lower(), seed=seed)
     print(f"Results will be saved to: {results_dir}")
     
     # Create stats reporter - define it early so it can be used even for existing runs
@@ -83,7 +115,7 @@ def run(seed=None, num_generations=100):
         print(f"Using existing run directory (config match found): {run_id}")
         
         # Check if the winner already exists
-        winner_path = os.path.join(results_dir, 'winner-kan.pkl')
+        winner_path = os.path.join(results_dir, f'winner-{net_type.lower()}.pkl')
         if os.path.exists(winner_path):
             print(f"Winner already exists at {winner_path}")
             
@@ -106,17 +138,18 @@ def run(seed=None, num_generations=100):
                 print("No statistics file found, visualizing with empty statistics")
             
             # Visualize the results
-            visualize_results(winner, stats, config, results_dir)
+            visualize_results(winner, stats, config, results_dir, net_type)
             return winner
     
     # Save the seed used
     if seed is not None:
         with open(os.path.join(results_dir, 'seed.txt'), 'w') as f:
             f.write(f"Seed: {seed}\n")
+            f.write(f"Network type: {net_type}\n")
 
     # Create population and add reporters
     pop = neat.Population(config)
-    pop.add_reporter(stats)  # Use the already created stats reporter
+    pop.add_reporter(stats)
     pop.add_reporter(neat.StdOutReporter(True))
     
     # Add a checkpoint reporter to save progress
@@ -128,8 +161,14 @@ def run(seed=None, num_generations=100):
     # Record start time
     start_time = time.time()
 
-    # Run the evolution
-    pe = neat.ParallelEvaluator(multiprocessing.cpu_count(), eval_genome)
+    # Choose the appropriate evaluation function
+    if net_type.lower() == 'feedforward':
+        eval_function = eval_feedforward_genome
+    else:
+        eval_function = eval_kan_genome
+
+    # Run the evolution with the selected evaluation function
+    pe = neat.ParallelEvaluator(multiprocessing.cpu_count(), eval_function)
     winner = pop.run(pe.evaluate, num_generations)
     
     # Record elapsed time
@@ -140,9 +179,10 @@ def run(seed=None, num_generations=100):
         f.write(f"Runtime: {elapsed:.2f} seconds\n")
         f.write(f"Generations: {pop.generation}\n")
         f.write(f"Date: {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+        f.write(f"Network type: {net_type}\n")
 
     # Save the winner
-    with open(os.path.join(results_dir, 'winner-kan.pkl'), 'wb') as f:
+    with open(os.path.join(results_dir, f'winner-{net_type.lower()}.pkl'), 'wb') as f:
         pickle.dump(winner, f)
     
     # Save statistics for future use
@@ -152,12 +192,21 @@ def run(seed=None, num_generations=100):
     print(winner)
     
     # Visualize the results
-    visualize_results(winner, stats, config, results_dir)
+    visualize_results(winner, stats, config, results_dir, net_type)
     
     return winner
 
-def visualize_results(winner, stats, config, results_dir):
-    """Generate all visualizations and save them in the results directory."""
+def visualize_results(winner, stats, config, results_dir, net_type='feedforward'):
+    """
+    Generate all visualizations and save them in the results directory.
+    
+    Args:
+        winner: The winning genome
+        stats: NEAT statistics reporter
+        config: The experiment configuration
+        results_dir: Directory to save results
+        net_type: Type of network ('feedforward' or 'kan')
+    """
     print("Plotting statistics...")
     if stats.generation_statistics:  # Check if we have valid statistics
         stats_path = os.path.join(results_dir, "fitness.png")
@@ -172,33 +221,37 @@ def visualize_results(winner, stats, config, results_dir):
     # Define node names for better visualization
     node_names = {-1: 'x', -2: 'dx', -3: 'theta', -4: 'dtheta', 0: 'control'}
     
-    # Use KAN-specific visualization functions
+    # Visualize the network
     print("Visualizing winner...")
     net_path = os.path.join(results_dir, "network")
     visualize.draw_net(config, winner, view=False, node_names=node_names,
-                        filename=net_path, fmt='png', net_type='kan')
+                        filename=net_path, fmt='png', net_type=net_type)
     
     print("Visualizing winner (pruned)...")
     pruned_path = os.path.join(results_dir, "network-pruned")
     visualize.draw_net(config, winner, view=False, node_names=node_names,
-                        filename=pruned_path, prune_unused=True, fmt='png', net_type='kan')
+                        filename=pruned_path, prune_unused=True, fmt='png', net_type=net_type)
     
-    # Plot spline visualizations
-    print("Plotting splines...")
-    splines_path = os.path.join(results_dir, "splines.png")
-    visualize.plot_kan_splines(winner, config.genome_config, 
-                                  filename=splines_path, view=False)
+    # KAN-specific visualizations
+    if net_type.lower() == 'kan':
+        try:
+            print("Plotting splines...")
+            splines_path = os.path.join(results_dir, "splines.png")
+            visualize.plot_kan_splines(winner, config.genome_config, 
+                                      filename=splines_path, view=False)
+        except Exception as e:
+            print(f"Error plotting splines: {e}")
     
     # Analyze the genome and save to file
     print("Analyzing genome...")
     analysis_path = os.path.join(results_dir, "genome_analysis.txt")
-    with open(analysis_path, 'w', encoding='utf-8') as f:
+    with open(analysis_path, 'w') as f:
         # Redirect stdout to the file
         import sys
         original_stdout = sys.stdout
         sys.stdout = f
         
-        visualize.analyze_genome(winner, config.genome_config, node_names, net_type='kan')
+        visualize.analyze_genome(winner, config.genome_config, node_names, net_type=net_type)
         
         # Restore stdout
         sys.stdout = original_stdout
@@ -207,11 +260,15 @@ def visualize_results(winner, stats, config, results_dir):
 
 if __name__ == '__main__':
     # Set up command-line arguments
-    parser = argparse.ArgumentParser(description='Run KAN pole balancing evolution')
+    parser = argparse.ArgumentParser(description='Run pole balancing evolution')
+    parser.add_argument('--net-type', type=str, default='feedforward', 
+                      choices=['feedforward', 'kan'],
+                      help='Type of network to use (feedforward or kan)')
     parser.add_argument('--seed', type=int, help='Random seed for reproducibility')
     parser.add_argument('--generations', type=int, default=100, 
                       help='Number of generations to run')
     
     args = parser.parse_args()
     
-    run(seed=args.seed, num_generations=args.generations)
+    run(net_type=args.net_type, seed=args.seed, num_generations=args.generations)
+    

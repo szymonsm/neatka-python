@@ -5,14 +5,18 @@ Single-pole balancing experiment using a feed-forward neural network.
 import multiprocessing
 import os
 import pickle
+import time
+import argparse
+import random
+import numpy as np
 
 import cart_pole
 import neat
 import visualize
+import results_manager
 
 runs_per_net = 5
 simulation_seconds = 60.0
-
 
 # Use the NN network phenotype and the discrete actuator force function.
 def eval_genome(genome, config):
@@ -21,6 +25,8 @@ def eval_genome(genome, config):
     fitnesses = []
 
     for runs in range(runs_per_net):
+        random.seed(runs)
+        np.random.seed(runs)
         sim = cart_pole.CartPole()
 
         # Run the given simulation for up to num_steps time steps.
@@ -46,46 +52,159 @@ def eval_genome(genome, config):
     # The genome's fitness is its worst performance across all runs.
     return min(fitnesses)
 
-
 def eval_genomes(genomes, config):
     for genome_id, genome in genomes:
         genome.fitness = eval_genome(genome, config)
 
-
-def run():
-    # Load the config file, which is assumed to live in
-    # the same directory as this script.
+def run(seed=None, num_generations=100):
+    """Run the experiment with optional seed for reproducibility."""
+    # Set seed if provided
+    if seed is not None:
+        random.seed(seed)
+        np.random.seed(seed)
+        
+    # Load the config file
     local_dir = os.path.dirname(__file__)
     config_path = os.path.join(local_dir, 'config-feedforward')
     config = neat.Config(neat.DefaultGenome, neat.DefaultReproduction,
                          neat.DefaultSpeciesSet, neat.DefaultStagnation,
                          config_path)
-
-    pop = neat.Population(config)
+    
+    # Set up results directory
+    results_dir, run_id, is_new_run = results_manager.setup_results_directory(
+        config, experiment_name='feedforward', seed=seed)
+    print(f"Results will be saved to: {results_dir}")
+    
+    # Create stats reporter - define it early so it can be used even for existing runs
     stats = neat.StatisticsReporter()
-    pop.add_reporter(stats)
+    
+    if not is_new_run:
+        print(f"Using existing run directory (config match found): {run_id}")
+        
+        # Check if the winner already exists
+        winner_path = os.path.join(results_dir, 'winner-feedforward.pkl')
+        if os.path.exists(winner_path):
+            print(f"Winner already exists at {winner_path}")
+            
+            # Load the winner
+            with open(winner_path, 'rb') as f:
+                winner = pickle.load(f)
+            
+            # Check if statistics exist
+            stats_path = os.path.join(results_dir, 'statistics.pkl')
+            if os.path.exists(stats_path):
+                # Load existing statistics
+                try:
+                    with open(stats_path, 'rb') as f:
+                        stats = pickle.load(f)
+                    print("Loaded existing statistics")
+                except Exception as e:
+                    print(f"Could not load statistics: {e}")
+                    # Will use empty stats
+            else:
+                print("No statistics file found, visualizing with empty statistics")
+            
+            # Visualize the results
+            visualize_results(winner, stats, config, results_dir)
+            return winner
+    
+    # Save the seed used
+    if seed is not None:
+        with open(os.path.join(results_dir, 'seed.txt'), 'w') as f:
+            f.write(f"Seed: {seed}\n")
+
+    # Create population and add reporters
+    pop = neat.Population(config)
+    pop.add_reporter(stats)  # Use the already created stats reporter
     pop.add_reporter(neat.StdOutReporter(True))
+    
+    # Add a checkpoint reporter to save progress
+    checkpoints_dir = os.path.join(results_dir, 'checkpoints')
+    os.makedirs(checkpoints_dir, exist_ok=True)
+    checkpoint_prefix = os.path.join(checkpoints_dir, 'neat-checkpoint-')
+    pop.add_reporter(neat.Checkpointer(5, 900, checkpoint_prefix))
+    
+    # Record start time
+    start_time = time.time()
 
+    # Run the evolution
     pe = neat.ParallelEvaluator(multiprocessing.cpu_count(), eval_genome)
-    winner = pop.run(pe.evaluate)
+    winner = pop.run(pe.evaluate, num_generations)
+    
+    # Record elapsed time
+    elapsed = time.time() - start_time
+    print(f"Total time elapsed: {elapsed:.2f} seconds")
+    
+    with open(os.path.join(results_dir, 'runtime.txt'), 'w') as f:
+        f.write(f"Runtime: {elapsed:.2f} seconds\n")
+        f.write(f"Generations: {pop.generation}\n")
+        f.write(f"Date: {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
 
-    # Save the winner.
-    with open('winner-feedforward', 'wb') as f:
+    # Save the winner
+    with open(os.path.join(results_dir, 'winner-feedforward.pkl'), 'wb') as f:
         pickle.dump(winner, f)
-
+    
+    # Save statistics for future use
+    with open(os.path.join(results_dir, 'statistics.pkl'), 'wb') as f:
+        pickle.dump(stats, f)
+    
     print(winner)
+    
+    # Visualize the results
+    visualize_results(winner, stats, config, results_dir)
+    
+    return winner
 
-    visualize.plot_stats(stats, ylog=True, view=True, filename="feedforward-fitness.svg")
-    visualize.plot_species(stats, view=True, filename="feedforward-speciation.svg")
+def visualize_results(winner, stats, config, results_dir):
+    """Generate all visualizations and save them in the results directory."""
+    print("Plotting statistics...")
+    if stats.generation_statistics:  # Check if we have valid statistics
+        stats_path = os.path.join(results_dir, "fitness.png")
+        visualize.plot_stats(stats, ylog=False, view=False, filename=stats_path)
+        
+        print("Plotting species...")
+        species_path = os.path.join(results_dir, "speciation.png")
+        visualize.plot_species(stats, view=False, filename=species_path)
+    else:
+        print("No statistics available to plot")
 
+    # Define node names for better visualization
     node_names = {-1: 'x', -2: 'dx', -3: 'theta', -4: 'dtheta', 0: 'control'}
-    visualize.draw_net(config, winner, True, node_names=node_names)
-
-    visualize.draw_net(config, winner, view=True, node_names=node_names,
-                       filename="winner-feedforward.gv")
-    visualize.draw_net(config, winner, view=True, node_names=node_names,
-                       filename="winner-feedforward-enabled-pruned.gv", prune_unused=True)
-
+    
+    # Visualize the network
+    print("Visualizing winner...")
+    net_path = os.path.join(results_dir, "network")
+    visualize.draw_net(config, winner, view=False, node_names=node_names,
+                       filename=net_path, fmt='png', net_type='feedforward')
+    
+    print("Visualizing winner (pruned)...")
+    pruned_path = os.path.join(results_dir, "network-pruned")
+    visualize.draw_net(config, winner, view=False, node_names=node_names,
+                       filename=pruned_path, prune_unused=True, fmt='png', net_type='feedforward')
+    
+    # Analyze the genome and save to file
+    print("Analyzing genome...")
+    analysis_path = os.path.join(results_dir, "genome_analysis.txt")
+    with open(analysis_path, 'w', encoding='utf-8') as f:
+        # Redirect stdout to the file
+        import sys
+        original_stdout = sys.stdout
+        sys.stdout = f
+        
+        visualize.analyze_genome(winner, config.genome_config, node_names, net_type='feedforward')
+        
+        # Restore stdout
+        sys.stdout = original_stdout
+    
+    print(f"All results saved to {results_dir}")
 
 if __name__ == '__main__':
-    run()
+    # Set up command-line arguments
+    parser = argparse.ArgumentParser(description='Run feedforward pole balancing evolution')
+    parser.add_argument('--seed', type=int, help='Random seed for reproducibility')
+    parser.add_argument('--generations', type=int, default=100, 
+                      help='Number of generations to run')
+    
+    args = parser.parse_args()
+    
+    run(seed=args.seed, num_generations=args.generations)
