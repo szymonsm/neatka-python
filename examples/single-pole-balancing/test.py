@@ -95,6 +95,9 @@ def test_genome(genome_path=None, view=False, net_type='feedforward'):
     else:
         net = KANNetwork.create(genome, config)
     
+    # Set the random seed for reproducibility
+    random.seed(999)
+    np.random.seed(999)
     # Create the simulator
     sim = CartPole()
     
