@@ -2,7 +2,6 @@
 Single-pole balancing experiment using either a standard feedforward neural network
 or a Kolmogorov-Arnold Network (KAN).
 """
-
 import multiprocessing
 import os
 import pickle
@@ -10,6 +9,7 @@ import time
 import argparse
 import random
 import numpy as np
+import sys
 
 import cart_pole
 import neat
@@ -21,8 +21,10 @@ try:
     from neat.nn.kan import KANNetwork
     from neat.kan_genome import KANGenome
     KAN_AVAILABLE = True
+    print(f"KAN available: {KAN_AVAILABLE}")
 except ImportError:
     KAN_AVAILABLE = False
+    print(f"KAN available: {KAN_AVAILABLE}")
 
 runs_per_net = 5
 simulation_seconds = 60.0
@@ -68,7 +70,35 @@ def _run_simulation(net):
     # The genome's fitness is its worst performance across all runs
     return min(fitnesses)
 
-def run(net_type='feedforward', seed=None, num_generations=100):
+# Move GenerationReporter to module level to make it picklable
+class GenerationReporter(neat.reporting.BaseReporter):
+    def __init__(self, generation_data):
+        self.generation_data = generation_data
+
+    def end_generation(self, config, population, species_set):
+        best = None
+        for genome_id, genome in population.items():
+            if genome.fitness is not None:
+                if best is None or genome.fitness > best.fitness:
+                    best = genome
+        
+        avg_fitness = sum(g.fitness for g in population.values() if g.fitness is not None)
+        count = sum(1 for g in population.values() if g.fitness is not None)
+        avg_fitness = avg_fitness / count if count > 0 else 0
+        
+        self.generation_data.append({
+            'generation': len(self.generation_data),
+            'best_fitness': best.fitness if best is not None else 0,
+            'avg_fitness': avg_fitness,
+            'species_count': len(species_set.species),
+            'complexity': len(best.connections) if best is not None else 0,
+            'hidden_nodes': len([n for n in best.nodes 
+                              if n not in config.genome_config.input_keys and 
+                                 n not in config.genome_config.output_keys]) if best is not None else 0
+        })
+
+def run(net_type='feedforward', seed=None, num_generations=100, config_file=None, 
+        results_file=None, skip_plots=False):
     """
     Run evolution with the specified network type.
     
@@ -76,10 +106,16 @@ def run(net_type='feedforward', seed=None, num_generations=100):
         net_type: Type of network to use ('feedforward' or 'kan')
         seed: Random seed for reproducibility (default: None)
         num_generations: Number of generations to run (default: 100)
+        config_file: Optional path to custom config file
+        results_file: Optional path to save generation results as CSV
+        skip_plots: Skip generating plots to save time/space (default: False)
         
     Returns:
         The winning genome
     """
+    # Track per-generation data if results_file is provided
+    generation_data = []
+
     # Validate network type
     if net_type.lower() == 'kan' and not KAN_AVAILABLE:
         raise ImportError("KAN network type requested but KAN modules not available")
@@ -91,7 +127,10 @@ def run(net_type='feedforward', seed=None, num_generations=100):
         
     # Load the appropriate config file
     local_dir = os.path.dirname(__file__)
-    config_path = os.path.join(local_dir, f'config-{net_type.lower()}')
+    if config_file:
+        config_path = config_file
+    else:
+        config_path = os.path.join(local_dir, f'config-{net_type.lower()}')
     
     # Use appropriate genome type based on network type
     if net_type.lower() == 'feedforward':
@@ -133,12 +172,13 @@ def run(net_type='feedforward', seed=None, num_generations=100):
                     print("Loaded existing statistics")
                 except Exception as e:
                     print(f"Could not load statistics: {e}")
-                    # Will use empty stats
-            else:
-                print("No statistics file found, visualizing with empty statistics")
             
-            # Visualize the results
-            visualize_results(winner, stats, config, results_dir, net_type)
+            # Only generate visualizations if not skipping plots
+            if not skip_plots:
+                visualize_results(winner, stats, config, results_dir, net_type)
+            else:
+                print("Skipping plot generation (--skip-plots is set)")
+                
             return winner
     
     # Save the seed used
@@ -151,6 +191,11 @@ def run(net_type='feedforward', seed=None, num_generations=100):
     pop = neat.Population(config)
     pop.add_reporter(stats)
     pop.add_reporter(neat.StdOutReporter(True))
+    
+    # Add a reporter to collect per-generation stats
+    if results_file:
+        gen_reporter = GenerationReporter(generation_data)
+        pop.add_reporter(gen_reporter)
     
     # Add a checkpoint reporter to save progress
     checkpoints_dir = os.path.join(results_dir, 'checkpoints')
@@ -189,16 +234,30 @@ def run(net_type='feedforward', seed=None, num_generations=100):
     with open(os.path.join(results_dir, 'statistics.pkl'), 'wb') as f:
         pickle.dump(stats, f)
     
+    # Save generation data to CSV if requested
+    if results_file:
+        try:
+            import pandas as pd
+            results_df = pd.DataFrame(generation_data)
+            results_df.to_csv(results_file, index=False)
+            print(f"Generation results saved to {results_file}")
+        except Exception as e:
+            print(f"Error saving results to CSV: {e}")
+    
     print(winner)
     
-    # Visualize the results
-    visualize_results(winner, stats, config, results_dir, net_type)
+    # Only generate visualizations if not skipping plots
+    if not skip_plots:
+        visualize_results(winner, stats, config, results_dir, net_type)
+    else:
+        print("Skipping plot generation (--skip-plots is set)")
     
     return winner
 
 def visualize_results(winner, stats, config, results_dir, net_type='feedforward'):
     """
-    Generate all visualizations and save them in the results directory.
+    Generate minimal visualizations and save them in the results directory.
+    For full visualization, use test.py.
     
     Args:
         winner: The winning genome
@@ -221,33 +280,11 @@ def visualize_results(winner, stats, config, results_dir, net_type='feedforward'
     # Define node names for better visualization
     node_names = {-1: 'x', -2: 'dx', -3: 'theta', -4: 'dtheta', 0: 'control'}
     
-    # Visualize the network
-    print("Visualizing winner...")
-    net_path = os.path.join(results_dir, "network")
-    visualize.draw_net(config, winner, view=False, node_names=node_names,
-                        filename=net_path, fmt='png', net_type=net_type)
-    
-    print("Visualizing winner (pruned)...")
-    pruned_path = os.path.join(results_dir, "network-pruned")
-    visualize.draw_net(config, winner, view=False, node_names=node_names,
-                        filename=pruned_path, prune_unused=True, fmt='png', net_type=net_type)
-    
-    # KAN-specific visualizations
-    if net_type.lower() == 'kan':
-        try:
-            print("Plotting splines...")
-            splines_path = os.path.join(results_dir, "splines.png")
-            visualize.plot_kan_splines(winner, config.genome_config, 
-                                      filename=splines_path, view=False)
-        except Exception as e:
-            print(f"Error plotting splines: {e}")
-    
-    # Analyze the genome and save to file
+    # Analyze the genome and save to file (minimal but useful text output)
     print("Analyzing genome...")
     analysis_path = os.path.join(results_dir, "genome_analysis.txt")
     with open(analysis_path, 'w') as f:
         # Redirect stdout to the file
-        import sys
         original_stdout = sys.stdout
         sys.stdout = f
         
@@ -256,7 +293,8 @@ def visualize_results(winner, stats, config, results_dir, net_type='feedforward'
         # Restore stdout
         sys.stdout = original_stdout
     
-    print(f"All results saved to {results_dir}")
+    print(f"Basic results saved to {results_dir}")
+    print(f"Run 'python test.py --genome {os.path.join(results_dir, f'winner-{net_type.lower()}.pkl')} --net-type {net_type}' for full visualization and analysis")
 
 if __name__ == '__main__':
     # Set up command-line arguments
@@ -267,8 +305,11 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, help='Random seed for reproducibility')
     parser.add_argument('--generations', type=int, default=100, 
                       help='Number of generations to run')
+    parser.add_argument('--config', type=str, help='Path to config file')
+    parser.add_argument('--results-file', type=str, help='CSV file to save generation results')
+    parser.add_argument('--skip-plots', action='store_true', help='Skip generating plots to save time/space')
     
     args = parser.parse_args()
     
-    run(net_type=args.net_type, seed=args.seed, num_generations=args.generations)
-    
+    run(net_type=args.net_type, seed=args.seed, num_generations=args.generations,
+        config_file=args.config, results_file=args.results_file, skip_plots=args.skip_plots)
