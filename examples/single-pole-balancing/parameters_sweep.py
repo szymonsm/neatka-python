@@ -21,10 +21,10 @@ PARAMETERS = {
     'network_type': ['feedforward', 'kan'],
     'population_size': [100, 250, 500],
     'num_hidden': [1, 2, 3],
-    'conn_add_prob': [0.1, 0.2, 0.5],
-    'conn_delete_prob': [0.1, 0.2, 0.5], 
-    'node_add_prob': [0.1, 0.2, 0.5],
-    'node_delete_prob': [0.1, 0.2, 0.5],
+    'conn_add_prob': [0.2],
+    'conn_delete_prob': [0.2], 
+    'node_add_prob': [0.2],
+    'node_delete_prob': [0.2],
 }
 
 # Seeds to use for each configuration
