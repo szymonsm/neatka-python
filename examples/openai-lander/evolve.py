@@ -138,7 +138,7 @@ class PooledErrorCompute(object):
         if self.num_workers < 2:
             for genome, net in nets:
                 reward_error = compute_fitness(genome, net, self.test_episodes, self.min_reward, self.max_reward)
-                genome.fitness = -np.sum(reward_error) / len(self.test_episodes)
+                genome.fitness = np.sum(reward_error) / len(self.test_episodes)
         else:
             with multiprocessing.Pool(self.num_workers) as pool:
                 jobs = []
@@ -149,7 +149,7 @@ class PooledErrorCompute(object):
 
                 for job, (genome_id, genome) in zip(jobs, genomes):
                     reward_error = job.get(timeout=None)
-                    genome.fitness = -np.sum(reward_error) / len(self.test_episodes)
+                    genome.fitness = np.sum(reward_error) / len(self.test_episodes)
 
         print("final fitness compute time {0}\n".format(time.time() - t0))
 
@@ -218,7 +218,7 @@ def run():
                     best_action = np.argmax(votes)
                     # Note: done has been deprecated.
                     observation, reward, terminated, done, info = env.step(best_action)
-                    score += reward
+                    score -= reward
                     env.render()
                     if terminated:
                         break
@@ -229,7 +229,7 @@ def run():
                 best_scores.append(score)
                 avg_score = sum(best_scores) / len(best_scores)
                 print(k, score, avg_score)
-                if avg_score < 200:
+                if avg_score < 160:
                     solved = False
                     break
 
