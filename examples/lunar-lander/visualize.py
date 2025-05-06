@@ -200,10 +200,11 @@ def draw_net(config, genome, view=False, filename=None, node_names=None, show_di
     spline_plots = {}
     if net_type.lower() == 'kan' and filename:
         # Create directory for spline plots based on output filename
-        base_dir = os.path.dirname(filename)
-        spline_img_path_dir = os.path.join(base_dir, 'spline_plots')
+        spline_img_path_dir = filename.split("\\")[:-1]
+        # Create a new directory for the spline plots
+        spline_img_path_dir = "\\".join(spline_img_path_dir)
+        spline_img_path_dir = os.path.join(spline_img_path_dir, 'spline_plots')
         os.makedirs(spline_img_path_dir, exist_ok=True)
-        
         for cg in genome.connections.values():
             if (cg.enabled or show_disabled) and hasattr(cg, 'spline_segments') and len(cg.spline_segments) > 0:
                 input_key, output_key = cg.key
@@ -255,7 +256,7 @@ def draw_net(config, genome, view=False, filename=None, node_names=None, show_di
             if net_type.lower() == 'kan' and hasattr(cg, 'spline_segments') and len(cg.spline_segments) > 0:
                 # Add an intermediate node for the spline
                 spline_node = f"{input_key}_{output_key}_spline"
-                
+                print(spline_plots[cg.key])
                 # If we have a spline plot image, use it in the node
                 if cg.key in spline_plots:
                     # For formats supporting embedded images
@@ -268,7 +269,7 @@ def draw_net(config, genome, view=False, filename=None, node_names=None, show_di
                                  fontsize='10',
                                  width='1.0', 
                                  height='1.0',
-                                 image=spline_plots[cg.key],
+                                 image="C:/Users/szymo/WUT/Masters/Thesis/neatka-python/" + spline_plots[cg.key],
                                  imagescale='true',
                                  imagepos='tc')
                     else:
@@ -331,7 +332,7 @@ def draw_net(config, genome, view=False, filename=None, node_names=None, show_di
     
     # Render the graph
     if filename:
-        dot.render(filename, view=view, cleanup=True)
+        dot.render(filename, view=view, cleanup=True, format=fmt)
     
     return dot
 
