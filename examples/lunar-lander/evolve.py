@@ -43,10 +43,10 @@ def _run_simulation(net):
     """Run the lunar lander simulation with the given network."""
     fitnesses = []
 
-    for _ in range(runs_per_net):
+    for s in range(runs_per_net):
         # Create a fresh environment for each run
-        env = lunar_lander.create_env()
-        fitness = lunar_lander.run_simulation(net, env)
+        env = lunar_lander.create_env(seed=s)
+        fitness = lunar_lander.run_simulation(net, env, seed=s)
         env.close()
         fitnesses.append(fitness)
 

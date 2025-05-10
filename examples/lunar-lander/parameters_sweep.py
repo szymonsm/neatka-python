@@ -19,12 +19,12 @@ from pathlib import Path
 # Parameters to sweep
 PARAMETERS = {
     'network_type': ['feedforward', 'kan'],
-    'population_size': [100, 150, 200],
-    'num_hidden': [4, 8, 16],
-    'conn_add_prob': [0.2, 0.5],
-    'conn_delete_prob': [0.2, 0.5], 
-    'node_add_prob': [0.1, 0.2],
-    'node_delete_prob': [0.1, 0.2],
+    'population_size': [100, 250, 500],
+    'num_hidden': [8, 16, 32],
+    'conn_add_prob': [0.2],
+    'conn_delete_prob': [0.2], 
+    'node_add_prob': [0.2],
+    'node_delete_prob': [0.2],
 }
 
 # Seeds to use for each configuration

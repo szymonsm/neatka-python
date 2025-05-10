@@ -2,20 +2,56 @@
 fitness_criterion     = max
 fitness_threshold     = 200.0
 pop_size              = 150
-reset_on_extinction   = False
+reset_on_extinction   = 0
 
 [KANGenome]
-# node activation options
+# Network parameters
+num_inputs            = 8
+num_hidden            = 2
+num_outputs           = 4
+initial_connection    = partial_direct 0.5
+feed_forward          = True
+
+# Compatibility parameters
+compatibility_disjoint_coefficient = 1.0
+compatibility_weight_coefficient   = 0.6
+
+# Connection parameters
+conn_add_prob         = 0.2
+conn_delete_prob      = 0.2
+
+# Node parameters
+node_add_prob         = 0.2
+node_delete_prob      = 0.2
+
+# Connection enable parameters
+enabled_default         = True
+enabled_mutate_rate     = 0.01
+enabled_rate_to_true_add  = 0.0
+enabled_rate_to_false_add = 0.0
+
+# Structural mutation parameters
+single_structural_mutation = False
+structural_mutation_surer  = default
+
+# Activation and aggregation
 activation_default      = identity
-activation_mutate_rate  = 0.0
 activation_options      = identity
-
-# node aggregation options
+activation_mutate_rate  = 0.0
 aggregation_default     = sum
-aggregation_mutate_rate = 0.0
 aggregation_options     = sum
+aggregation_mutate_rate = 0.0
 
-# node bias options
+# Standard connection parameters
+; weight_init_mean        = 0.0
+; weight_init_stdev       = 1.0
+; weight_max_value        = 1
+; weight_min_value        = 1
+; weight_mutate_rate      = 0.8
+; weight_mutate_power     = 0.5
+; weight_replace_rate     = 0.1
+
+# Node bias parameters
 bias_init_mean          = 0.0
 bias_init_stdev         = 1.0
 bias_max_value          = 30.0
@@ -24,31 +60,7 @@ bias_mutate_power       = 0.5
 bias_mutate_rate        = 0.7
 bias_replace_rate       = 0.1
 
-# genome compatibility options
-compatibility_disjoint_coefficient = 1.0
-compatibility_weight_coefficient   = 0.5
-
-# connection add/remove rates
-conn_add_prob           = 0.5
-conn_delete_prob        = 0.5
-
-# connection enable options
-enabled_default         = True
-enabled_mutate_rate     = 0.01
-
-feed_forward            = True
-initial_connection      = full
-
-# node add/remove rates
-node_add_prob           = 0.2
-node_delete_prob        = 0.2
-
-# network parameters
-num_hidden              = 8
-num_inputs              = 8
-num_outputs             = 4
-
-# node response options
+# Node response parameters
 response_init_mean      = 1.0
 response_init_stdev     = 0.0
 response_max_value      = 30.0
@@ -58,9 +70,9 @@ response_mutate_rate    = 0.0
 response_replace_rate   = 0.0
 
 # KAN-specific initialization parameters
-weight_s_init_mean      = 1.0
-weight_s_init_stdev     = 0.1
-weight_s_replace_rate   = 0.1
+weight_s_init_mean         = 1.0
+weight_s_init_stdev        = 0.1
+weight_s_replace_rate      = 0.1
 weight_b_init_mean      = 1.0
 weight_b_init_stdev     = 0.1
 weight_b_replace_rate   = 0.1
@@ -70,27 +82,27 @@ spline_replace_rate     = 0.1
 
 # KAN-specific parameters
 weight_s_coefficient_range = 5.0
-weight_b_coefficient_range = 5.0
+weight_b_coefficient_range  = 5.0
 spline_coefficient_range = 5.0
 weight_s_mutate_rate     = 0.1
 weight_s_mutate_power    = 0.5
-weight_s_min_value       = -30.0
-weight_s_max_value       = 30.0
-weight_b_mutate_rate     = 0.1
-weight_b_mutate_power    = 0.5
-weight_b_min_value       = -30.0
-weight_b_max_value       = 30.0
-spline_mutate_rate       = 0.2
-spline_mutate_power      = 0.5
-spline_min_value         = -30.0
-spline_max_value         = 30.0
-spline_add_prob          = 0.2
-spline_delete_prob       = 0.2
-initial_spline_segments  = 3
-min_spline_segments      = 2
-max_spline_segments      = 10
-spline_range_min         = -10.0
-spline_range_max         = 10.0
+weight_s_min_value         = -30.0
+weight_s_max_value         = 30.0
+weight_b_mutate_rate  = 0.1
+weight_b_mutate_power = 0.5
+weight_b_min_value      = -30.0
+weight_b_max_value      = 30.0
+spline_mutate_rate    = 0.2
+spline_mutate_power   = 0.5
+spline_min_value        = -30.0
+spline_max_value        = 30.0
+spline_add_prob         = 0.2
+spline_delete_prob      = 0.2
+initial_spline_segments = 3
+min_spline_segments     = 2
+max_spline_segments     = 10
+spline_range_min        = -10.0
+spline_range_max        = 10.0
 kan_segments_distance_treshold = 0.01
 kan_connection_crossover_add_segment_rate = 0.5
 kan_segment_crossover_better_fitness_rate = 0.75
@@ -100,9 +112,8 @@ compatibility_threshold = 3.0
 
 [DefaultStagnation]
 species_fitness_func = max
-max_stagnation       = 15
-species_elitism      = 2
+max_stagnation  = 20
 
 [DefaultReproduction]
-elitism            = 2
+elitism            = 5
 survival_threshold = 0.2
