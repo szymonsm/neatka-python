@@ -18,9 +18,9 @@ from pathlib import Path
 
 # Parameters to sweep
 PARAMETERS = {
-    'network_type': ['feedforward', 'kan'],
+    'network_type': ['kan'],
     'population_size': [100, 250, 500],
-    'num_hidden': [8, 16, 32],
+    'num_hidden': [8, 16],
     'conn_add_prob': [0.2],
     'conn_delete_prob': [0.2], 
     'node_add_prob': [0.2],
@@ -49,6 +49,7 @@ def generate_config_file(params, base_config_path, output_path):
         'conn_delete_prob': str(params['conn_delete_prob']),
         'node_add_prob': str(params['node_add_prob']),
         'node_delete_prob': str(params['node_delete_prob']),
+        'compatibility_threshold': '3.3' if params['num_hidden'] == 8 else '3.5',
     }
     
     for param, value in replacements.items():

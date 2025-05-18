@@ -432,7 +432,7 @@ def draw_net(config, genome, view=False, filename=None, node_names=None, show_di
                                  fontsize='10',
                                  width='1.0', 
                                  height='1.0',
-                                 image="C:/Users/szymo/WUT/Masters/Thesis/neatka-python/" + spline_plots[cg.key],
+                                 image=spline_plots[cg.key],
                                  imagescale='true',
                                  imagepos='tc')
                     else:

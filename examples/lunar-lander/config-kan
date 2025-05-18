@@ -1,13 +1,13 @@
 [NEAT]
 fitness_criterion     = max
-fitness_threshold     = 200.0
+fitness_threshold     = 15.0
 pop_size              = 150
 reset_on_extinction   = 0
 
 [KANGenome]
 # Network parameters
 num_inputs            = 8
-num_hidden            = 2
+num_hidden            = 8
 num_outputs           = 4
 initial_connection    = partial_direct 0.5
 feed_forward          = True
@@ -108,7 +108,7 @@ kan_connection_crossover_add_segment_rate = 0.5
 kan_segment_crossover_better_fitness_rate = 0.75
 
 [DefaultSpeciesSet]
-compatibility_threshold = 3.0
+compatibility_threshold = 3.3
 
 [DefaultStagnation]
 species_fitness_func = max

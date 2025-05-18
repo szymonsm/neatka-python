@@ -4,7 +4,7 @@ Fitness evaluation functions for the LunarLander-v2 environment.
 import lunar_lander
 
 # Default number of runs per network
-runs_per_net = 3
+runs_per_net = 10
 
 def evaluate_genome(genome, config, net_creator, env=None):
     """

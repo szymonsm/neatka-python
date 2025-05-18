@@ -26,7 +26,7 @@ except ImportError:
     KAN_AVAILABLE = False
     print(f"KAN available: {KAN_AVAILABLE}")
 
-runs_per_net = 3
+runs_per_net = 10
 
 # Define separate evaluation functions for each network type
 def eval_feedforward_genome(genome, config):

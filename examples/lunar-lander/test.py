@@ -182,7 +182,7 @@ def test_genome(genome_path=None, view=False, seed=None, net_type='feedforward',
     
     # Run the simulation - test the agent
     rewards = []
-    env = lunar_lander.create_env()
+    env = lunar_lander.create_env(seed=seed)
     
     # Store data for the best episode
     best_reward = float('-inf')
@@ -258,7 +258,7 @@ def test_genome(genome_path=None, view=False, seed=None, net_type='feedforward',
     # Calculate statistics
     avg_reward = np.mean(rewards)
     std_reward = np.std(rewards)
-    
+    print(f"Rewards: {rewards}")
     if verbose:
         print("\nTest Results:")
         print(f"  Episodes: {episodes}")
@@ -338,7 +338,7 @@ def test_genome(genome_path=None, view=False, seed=None, net_type='feedforward',
             if verbose:
                 print("\nCreating movie... (this may take a while)")
             movie_path = os.path.join(test_dir, 'simulation.mp4')
-            make_movie(net, movie_path)
+            make_movie(net, movie_path, seed=seed)
             if verbose:
                 print(f"Movie created successfully and saved to {movie_path}")
         except Exception as e:
