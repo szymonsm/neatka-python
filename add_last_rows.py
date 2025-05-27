@@ -3,16 +3,16 @@ import re
 import csv
 from glob import glob
 
-base_dir = "examples/single-pole-balancing/parameter_sweep_results/20250412_204250"
+base_dir = "examples/lunar-lander/parameter_sweep_results/20250520_081847"
 folder_patterns = ["kan_*", "feedforward_*"]
 
 # Regex patterns
 log_filename_re = re.compile(r"log_(\d+)\.txt")
 generation_re = re.compile(r"\*{6} Running generation (\d+) \*{6}")
-avg_fitness_re = re.compile(r"Population's average fitness:\s+([0-9.]+)")
+avg_fitness_re = re.compile(r"Population's average fitness:\s+([0-9.+-eE]+)")
 best_fitness_re = re.compile(r"Best fitness:\s+([0-9.+-eE]+)")
 species_re = re.compile(r"species\s+(\d+)")
-complexity_re = re.compile(r"complexity:\s+\((\d+),\s*(\d+)\)")
+complexity_re = re.compile(r"size:\s+\((\d+),\s*(\d+)\)")
 final_fitness_re = re.compile(r"^Fitness:\s+([0-9.+-eE]+)")
 hidden_node_re = re.compile(r"\t(\d+)\sKANNodeGene")
 
