@@ -75,17 +75,28 @@ def plot_convergence_distribution(df, output_dir, target_fitness=60.0):
         
         convergence_data[net_type] = convergence_gens
     
-    colors = plt.cm.Set1(np.linspace(0, 1, len(network_types)))
-    # Reverse order for better visibility
-    colors = colors[::-1]
+    # Define colors - use blue for feedforward/MLP-NEAT
+    colors = []
+    for net_type in network_types:
+        if net_type == 'feedforward':
+            colors.append('blue')
+        elif net_type == 'kan':
+            colors.append('#ff7f0e')  # Orange color from Set1
+        else:
+            colors.append('gray')
 
-    # Plot distribution for each network type
+    # Plot histogram for each network type
+    bins = np.linspace(0, max_gen * 1.1, 20) if max_gen > 0 else np.linspace(0, 100, 20)
+    
     for i, net_type in enumerate(network_types):
         valid_gens = convergence_data[net_type]
+        display_name = 'MLP-NEAT' if net_type == 'feedforward' else 'KAN-NEAT' if net_type == 'kan' else net_type
+        
         if valid_gens:
-            # Use kernel density estimation with bounded support (min=0)
-            sns.kdeplot(valid_gens, label=f"{net_type} (n={len(valid_gens)})",
-                       fill=True, alpha=0.3, linewidth=2, clip=(0, None), color=colors[i])
+            # Plot histogram with counts instead of density
+            plt.hist(valid_gens, bins=bins, alpha=0.6, color=colors[i], 
+                    label=f"{display_name} (n={len(valid_gens)})", 
+                    density=False, edgecolor='black', linewidth=0.5)
             
             # Mark the median with a vertical line
             median_gen = np.median(valid_gens)
@@ -96,7 +107,7 @@ def plot_convergence_distribution(df, output_dir, target_fitness=60.0):
                       linewidth=2)
             
             # Add summary statistics as text
-            plt.text(median_gen + (-7.5) if i == 0 else median_gen + 1, 0.01, 
+            plt.text(median_gen + (-7.5) if i == 0 else median_gen + 1, plt.ylim()[1] * 0.8, 
                    f"Median: {median_gen:.1f}\nMean: {np.mean(valid_gens):.1f}\nStd: {np.std(valid_gens):.1f}", 
                    color=colors[i], 
                    fontweight='bold',
@@ -104,13 +115,13 @@ def plot_convergence_distribution(df, output_dir, target_fitness=60.0):
                    bbox=dict(facecolor='white', alpha=0.7, boxstyle='round,pad=0.3'))
     
     # Set x-axis limits to avoid negative values
-    plt.xlim(0, max_gen * 1.1)  # Add 10% padding to the right
+    plt.xlim(0, max_gen * 1.1 if max_gen > 0 else 100)  # Add 10% padding to the right
     
-    plt.xlabel('Generations to Reach Fitness ≥ 15.0', fontsize=12)
-    plt.ylabel('Density', fontsize=12)
-    plt.title(f'Distribution of Convergence Speed (Target Fitness: {target_fitness})', fontsize=14)
+    plt.xlabel('Generations to Reach Fitness ≥ 15.0', fontsize=14)
+    plt.ylabel('Number of Experiments', fontsize=14)
+    plt.title(f'Distribution of Convergence Speed (Target Fitness: {target_fitness})', fontsize=16)
     plt.grid(True, alpha=0.3)
-    plt.legend(title="Network Type")
+    plt.legend(title="Method", fontsize=12)
     
     plt.tight_layout()
     plt.savefig(os.path.join(output_dir, 'convergence_distribution.png'), dpi=300, bbox_inches='tight')
@@ -217,27 +228,30 @@ def plot_convergence_failure_analysis(df, summary_df, output_dir, target_fitness
             plt.text(x[i], success_pcts[i]/2, 
                    f"{success_pcts[i]:.1f}%\n({s}/{t})", 
                    ha='center', va='center', 
-                   fontsize=10, fontweight='bold', color='white')
+                   fontsize=12, fontweight='bold', color='white')
         
         # Convergence failure percentage
         if c > 0:
             plt.text(x[i], success_pcts[i] + conv_fail_pcts[i]/2, 
                    f"{conv_fail_pcts[i]:.1f}%\n({c}/{t})", 
                    ha='center', va='center', 
-                   fontsize=10, fontweight='bold', color='white')
+                   fontsize=12, fontweight='bold', color='white')
         
         # Runtime failure percentage
         if r > 0:
             plt.text(x[i], success_pcts[i] + conv_fail_pcts[i] + runtime_fail_pcts[i]/2, 
                    f"{runtime_fail_pcts[i]:.1f}%\n({r}/{t})", 
                    ha='center', va='center', 
-                   fontsize=10, fontweight='bold', color='white')
+                   fontsize=12, fontweight='bold', color='white')
     
-    plt.ylabel('Percentage of Experiments', fontsize=12)
-    plt.title(f'Experiment Results (Target Fitness ≥ {target_fitness})', fontsize=14)
-    plt.xticks(x, network_types)
+    plt.ylabel('Percentage of Experiments', fontsize=14)
+    plt.title(f'Experiment Results (Target Fitness ≥ {target_fitness})', fontsize=16)
+    
+    # Replace network type names in legend and labels
+    display_names = ['MLP-NEAT' if nt == 'feedforward' else 'KAN-NEAT' if nt == 'kan' else nt for nt in network_types]
+    plt.xticks(x, display_names, fontsize=12)
     plt.yticks(np.arange(0, 101, 10))
-    plt.legend(loc='upper right')
+    plt.legend(loc='lower left', fontsize=12)  # Move legend to lower left
     plt.grid(axis='y', alpha=0.3)
     
     plt.tight_layout()
@@ -398,298 +412,367 @@ def plot_performance_by_parameter(df, param_name, output_dir):
     plt.savefig(os.path.join(output_dir, f'performance_by_{param_name}.png'), dpi=300)
     plt.close()
 
-def plot_fitness_by_hidden_nodes(df, output_dir):
+def plot_fitness_by_hidden_nodes(df: pd.DataFrame, output_dir: str) -> None:
     """
-    Plot fitness evolution over generations for different numbers of hidden nodes.
-    Shows one subplot per network type for easier comparison.
-    
-    Args:
-        df: DataFrame with results
-        output_dir: Directory to save output files
+    Visualise fitness evolution versus number of hidden nodes.
+
+    • One subplot per network_type showing every unique run
+      (population_size, num_hidden, conn_add_prob, conn_delete_prob,
+       node_add_prob, node_delete_prob, seed) as a faint line.
+    • A summary bar-chart ranks final performance for each configuration.
     """
     if df is None or df.empty:
         return
-    
+
     os.makedirs(output_dir, exist_ok=True)
-    
-    # Compare network types
-    network_types = sorted(df['network_type'].unique())
-    
-    # Get unique hidden node counts
+
+    # ------------------------------------------------------------------
+    # FIRST FIGURE: evolution curves
+    # ------------------------------------------------------------------
+    network_types      = sorted(df['network_type'].unique())
     hidden_node_counts = sorted(df['num_hidden'].unique())
-    
-    # Create subplots - one for each network type
-    fig, axes = plt.subplots(1, len(network_types), figsize=(16, 6), sharey=True)
+
+    fig, axes = plt.subplots(
+        1, len(network_types), figsize=(16, 6), sharey=True
+    )
     if len(network_types) == 1:
-        axes = [axes]  # Make axes iterable even with just one subplot
-    
+        axes = [axes]
+
+    # Columns that uniquely identify one evolutionary run
+    run_cols = [
+        'population_size', 'num_hidden',
+        'conn_add_prob', 'conn_delete_prob',
+        'node_add_prob', 'node_delete_prob',
+        'seed'
+    ]
+
     for i, net_type in enumerate(network_types):
-        ax = axes[i]
-        
-        # Define colors for different hidden node counts
+        ax     = axes[i]
         colors = plt.cm.viridis(np.linspace(0, 1, len(hidden_node_counts)))
         
+        # Get display name for title
+        display_name = 'MLP-NEAT' if net_type == 'feedforward' else 'KAN-NEAT' if net_type == 'kan' else net_type
+
         for j, num_hidden in enumerate(hidden_node_counts):
-            # Get data for this network type and hidden node count
-            subset = df[(df['network_type'] == net_type) & (df['num_hidden'] == num_hidden)]
-            
-            if not subset.empty:
-                # Plot individual runs with transparency
-                for seed in subset['seed'].unique():
-                    seed_data = subset[subset['seed'] == seed].sort_values('generation')
-                    ax.plot(seed_data['generation'], seed_data['best_fitness'], 
-                          color=colors[j], alpha=0.2, linewidth=0.6)
-                
-                # Calculate mean fitness per generation
-                mean_fitness = subset.groupby('generation')['best_fitness'].mean()
-                generations = mean_fitness.index.tolist()
-                
-                # Plot mean fitness with full opacity
-                ax.plot(generations, mean_fitness.values, 
-                       color=colors[j], linewidth=2.5, 
-                       label=f"{num_hidden} hidden nodes")
-                
-                # Find and mark the maximum fitness point
-                if len(mean_fitness.values) > 0:
-                    max_gen_idx = mean_fitness.values.argmax()
-                    max_gen = generations[max_gen_idx]
-                    max_fitness = mean_fitness.values[max_gen_idx]
-                    
-                    ax.scatter([max_gen], [max_fitness], 
-                             s=100, color=colors[j], marker='o', 
-                             edgecolor='black', linewidth=1, zorder=10)
-                    
-                    # Add text annotation for max fitness
-                    ax.annotate(f"Max: {max_fitness:.1f}", 
-                              xy=(max_gen, max_fitness), 
-                              xytext=(5, 5), textcoords='offset points', 
-                              fontsize=8, color=colors[j], fontweight='bold')
-        
-        ax.set_xlabel('Generation', fontsize=11)
-        if i == 0:  # Only add y-label to leftmost subplot
-            ax.set_ylabel('Best Fitness', fontsize=11)
-        ax.set_title(f'{net_type} Network', fontsize=12)
+            subset = df[
+                (df['network_type'] == net_type) &
+                (df['num_hidden']   == num_hidden)
+            ]
+            if subset.empty:
+                continue
+
+            # --- draw every distinct run (alpha=0.2) ---
+            for _, run in subset.groupby(run_cols):
+                run_sorted = run.sort_values('generation')
+                ax.plot(
+                    run_sorted['generation'], run_sorted['best_fitness'],
+                    color=colors[j], alpha=0.2, linewidth=0.6
+                )
+
+            # --- draw mean curve & mark its max ---
+            mean_fit    = subset.groupby('generation')['best_fitness'].mean()
+            generations = mean_fit.index.to_list()
+
+            ax.plot(
+                generations, mean_fit.values,
+                color=colors[j], linewidth=2.5,
+                label=f"{num_hidden} hidden nodes"
+            )
+
+            if mean_fit.size:
+                max_idx   = mean_fit.values.argmax()
+                max_gen   = generations[max_idx]
+                max_val   = mean_fit.values[max_idx]
+                ax.scatter(
+                    [max_gen], [max_val], s=100,
+                    color=colors[j], marker='o',
+                    edgecolor='black', linewidth=1, zorder=10
+                )
+                ax.annotate(
+                    f"Max: {max_val:.1f} at gen {max_gen}",
+                    xy=(max_gen, max_val), xytext=(5, 5),
+                    textcoords='offset points', fontsize=9,
+                    color=colors[j], fontweight='bold'
+                )
+
+        ax.set_xlabel('Generation', fontsize=12)
+        if i == 0:
+            ax.set_ylabel('Best Fitness', fontsize=12)
+        ax.set_title(f'{display_name}', fontsize=14)
         ax.grid(True, alpha=0.3)
-        ax.legend(title='Hidden Nodes')
-    
+        ax.legend(title='Hidden Nodes', fontsize=10)
+
     plt.tight_layout()
-    plt.savefig(os.path.join(output_dir, 'fitness_by_hidden_nodes.png'), dpi=300, bbox_inches='tight')
-    plt.close()
-    
-    # Keep the comparative bar chart as a separate visualization
-    plt.figure(figsize=(12, 8))
-    
-    # Track the best performance for each configuration
-    max_fitness_by_config = {}
-    
-    # Group by network type and hidden node count
-    for i, net_type in enumerate(network_types):
-        # Get best fitness for each hidden node count
-        best_fitness = []
-        std_devs = []
-        
-        for num_hidden in hidden_node_counts:
-            subset = df[(df['network_type'] == net_type) & (df['num_hidden'] == num_hidden)]
-            if not subset.empty:
-                # Group by experiment and get max fitness
-                grouped = subset.groupby(['seed', 'population_size', 'conn_add_prob', 
-                                         'conn_delete_prob', 'node_add_prob', 'node_delete_prob'])
-                max_fitness_per_exp = grouped['best_fitness'].max()
-                
-                mean_max = max_fitness_per_exp.mean()
-                std_dev = max_fitness_per_exp.std()
-                
-                best_fitness.append(mean_max)
-                std_devs.append(std_dev)
-                
-                # Store for tracking best config
-                max_fitness_by_config[(net_type, num_hidden)] = mean_max
-            else:
-                best_fitness.append(0)
-                std_devs.append(0)
-        
-        # Plot with offset for better visibility
-        offset = i * 0.15 - 0.15 * (len(network_types) - 1) / 2
-        x_pos = np.array(range(len(hidden_node_counts))) + offset
-        
-        plt.bar(x_pos, best_fitness, width=0.15, 
-               label=f"{net_type}", 
-               color=plt.cm.Set1(i/max(len(network_types), 1)), 
-               alpha=0.8)
-        
-        # Add error bars
-        plt.errorbar(x_pos, best_fitness, yerr=std_devs, fmt='none', color='black', 
-                    capsize=4, elinewidth=1, alpha=0.7)
-        
-        # Add value labels
-        for j, (x, y) in enumerate(zip(x_pos, best_fitness)):
-            plt.text(x, y + 0.5, f"{y:.1f}", ha='center', va='bottom', 
-                   fontsize=8, rotation=0)
-    
-    # Find the best overall configuration
-    if max_fitness_by_config:
-        best_config = max(max_fitness_by_config.items(), key=lambda x: x[1])
-        best_net_type, best_hidden = best_config[0]
-        best_fitness = best_config[1]
-        
-        # Mark the best configuration
-        best_idx = hidden_node_counts.index(best_hidden)
-        best_net_idx = network_types.index(best_net_type)
-        x_offset = best_net_idx * 0.15 - 0.15 * (len(network_types) - 1) / 2
-        best_x = best_idx + x_offset
-        
-        plt.scatter([best_x], [best_fitness], s=150, marker='o', 
-                   edgecolor='black', color='gold', zorder=10,
-                   label="Best Config")
-        
-        plt.annotate(f"Best: {best_fitness:.1f}\n{best_net_type}, {best_hidden} nodes", 
-                   xy=(best_x, best_fitness), 
-                   xytext=(0, 20), textcoords='offset points', 
-                   fontsize=10, fontweight='bold',
-                   bbox=dict(boxstyle="round,pad=0.3", fc='white', ec='gold', alpha=0.9),
-                   ha='center',
-                   arrowprops=dict(arrowstyle="->", connectionstyle="arc3,rad=.2", 
-                                 color='black'))
-    
-    plt.xlabel('Number of Hidden Nodes', fontsize=12)
-    plt.ylabel('Best Fitness (Mean across runs)', fontsize=12)
-    plt.title('Performance Comparison by Hidden Node Count', fontsize=14)
-    plt.xticks(range(len(hidden_node_counts)), hidden_node_counts)
-    plt.grid(axis='y', alpha=0.3)
-    plt.legend(title="Network Type")
-    plt.tight_layout()
-    
-    plt.savefig(os.path.join(output_dir, 'hidden_nodes_comparison.png'), dpi=300, bbox_inches='tight')
+    plt.savefig(os.path.join(output_dir, 'fitness_by_hidden_nodes.png'),
+                dpi=300, bbox_inches='tight')
     plt.close()
 
-def plot_fitness_over_generations(df, output_dir):
+    # ------------------------------------------------------------------
+    # SECOND FIGURE: comparative bar-chart of final performance
+    # ------------------------------------------------------------------
+    plt.figure(figsize=(12, 8))
+    max_fitness_by_config = {}
+
+    # Define colors - use blue for feedforward/MLP-NEAT
+    bar_colors = []
+    for net_type in network_types:
+        if net_type == 'feedforward':
+            bar_colors.append('blue')
+        elif net_type == 'kan':
+            bar_colors.append('#ff7f0e')  # Orange color from Set1
+        else:
+            bar_colors.append('gray')
+
+    for i, net_type in enumerate(network_types):
+        best_vals = []
+        std_devs  = []
+        
+        # Get display name for legend
+        display_name = 'MLP-NEAT' if net_type == 'feedforward' else 'KAN-NEAT' if net_type == 'kan' else net_type
+
+        for num_hidden in hidden_node_counts:
+            subset = df[
+                (df['network_type'] == net_type) &
+                (df['num_hidden']   == num_hidden)
+            ]
+            if subset.empty:
+                best_vals.append(0)
+                std_devs.append(0)
+                continue
+
+            grouped            = subset.groupby([
+                'seed', 'population_size',
+                'conn_add_prob', 'conn_delete_prob',
+                'node_add_prob',  'node_delete_prob'
+            ])['best_fitness'].max()
+            mean_max           = grouped.mean()
+            std_dev            = grouped.std()
+            best_vals.append(mean_max)
+            std_devs.append(std_dev)
+            max_fitness_by_config[(net_type, num_hidden)] = mean_max
+
+        # Offset bars for readability
+        offset = i * 0.15 - 0.15 * (len(network_types) - 1) / 2
+        x_pos  = np.arange(len(hidden_node_counts)) + offset
+
+        plt.bar(
+            x_pos, best_vals, width=0.15,
+            label=f"{display_name}",
+            color=bar_colors[i],
+            alpha=0.8
+        )
+        plt.errorbar(
+            x_pos, best_vals, yerr=std_devs,
+            fmt='none', color='black',
+            capsize=4, elinewidth=1, alpha=0.7
+        )
+        for x, y in zip(x_pos, best_vals):
+            plt.text(x, y + 0.5, f"{y:.1f}",
+                     ha='center', va='bottom', fontsize=9)
+
+    # Highlight best overall
+    if max_fitness_by_config:
+        (best_net, best_hidden), best_val = max(
+            max_fitness_by_config.items(), key=lambda x: x[1]
+        )
+        best_idx      = hidden_node_counts.index(best_hidden)
+        best_net_idx  = network_types.index(best_net)
+        best_x        = best_idx + (
+            best_net_idx * 0.15 - 0.15 * (len(network_types) - 1) / 2
+        )
+        
+        # Get display name for best config
+        best_display_name = 'MLP-NEAT' if best_net == 'feedforward' else 'KAN-NEAT' if best_net == 'kan' else best_net
+        
+        plt.scatter(
+            [best_x], [best_val], s=150, marker='o',
+            edgecolor='black', color='gold', zorder=10,
+            label="Best Config"
+        )
+        plt.annotate(
+            f"Best: {best_val:.1f}\n{best_display_name}, {best_hidden} nodes",
+            xy=(best_x, best_val), xytext=(0, 20),
+            textcoords='offset points', fontsize=11, fontweight='bold',
+            ha='center',
+            bbox=dict(boxstyle="round,pad=0.3",
+                      fc='white', ec='gold', alpha=0.9),
+            arrowprops=dict(arrowstyle="->",
+                            connectionstyle="arc3,rad=.2", color='black')
+        )
+
+    plt.xlabel('Number of Hidden Nodes', fontsize=14)
+    plt.ylabel('Best Fitness (Mean across runs)', fontsize=14)
+    plt.title('Performance Comparison by Hidden Node Count', fontsize=16)
+    plt.xticks(range(len(hidden_node_counts)), hidden_node_counts)
+    plt.grid(axis='y', alpha=0.3)
+    plt.legend(title="Method", fontsize=12)
+    plt.tight_layout()
+    plt.savefig(os.path.join(output_dir, 'hidden_nodes_comparison.png'),
+                dpi=300, bbox_inches='tight')
+    plt.close()
+
+def plot_fitness_over_generations(df: pd.DataFrame, output_dir: str) -> None:
     """
     Plot fitness over generations for different parameter configurations.
-    Shows raw data with transparency (alpha=0.4) and highlights when
-    maximum fitness is reached with full opacity (alpha=1.0).
+
+    • For each network_type figure:
+        – Every unique run (population_size, num_hidden, conn_add_prob,
+          conn_delete_prob, node_add_prob, node_delete_prob, seed)
+          is shown with a translucent line (alpha=0.4).
+        – The network-type mean curve is drawn semi-opaque, then re-drawn
+          fully opaque up to its peak, which is marked with a dot.
+
+    • A second figure contains one subplot per network_type comparing
+      population sizes.  Here, every unique run inside each population size
+      again gets its own translucent line.
     """
     if df is None or df.empty:
         return
-    
+
     os.makedirs(output_dir, exist_ok=True)
-    
-    # Compare network types
+
+    # ---------- FIRST FIGURE: compare network types ----------
     network_types = sorted(df['network_type'].unique())
-    
     plt.figure(figsize=(12, 7))
     
-    # Define colors for consistency
-    colors = plt.cm.Set1(np.linspace(0, 1, len(network_types)))
-    # Reverse order for better visibility
-    colors = colors[::-1]
-    
+    # Define colors - use blue for feedforward/MLP-NEAT
+    colors = []
+    for net_type in network_types:
+        if net_type == 'feedforward':
+            colors.append('blue')
+        elif net_type == 'kan':
+            colors.append('#ff7f0e')  # Orange color from Set1
+        else:
+            colors.append('gray')
+
+    # All columns that uniquely identify one evolutionary run
+    run_cols = [
+        'population_size', 'num_hidden',
+        'conn_add_prob', 'conn_delete_prob',
+        'node_add_prob', 'node_delete_prob',
+        'seed'
+    ]
+
     for i, net_type in enumerate(network_types):
-        net_type_data = df[df['network_type'] == net_type]
+        net_data = df[df['network_type'] == net_type]
         
-        # Plot individual runs with transparency
-        for seed in net_type_data['seed'].unique():
-            seed_data = net_type_data[net_type_data['seed'] == seed].sort_values('generation')
-            plt.plot(seed_data['generation'], seed_data['best_fitness'], 
-                    color=colors[i], alpha=0.4, linewidth=0.8)
-        
-        # Calculate mean fitness per generation
-        mean_fitness = net_type_data.groupby('generation')['best_fitness'].mean()
-        generations = mean_fitness.index
-        
-        # Plot all mean data with semi-transparency
-        plt.plot(generations, mean_fitness, color=colors[i], alpha=0.6, linewidth=1.5)
-        
-        # Find the generation where maximum fitness is reached
-        max_gen_idx = mean_fitness.argmax()
-        max_gen = generations[max_gen_idx]
-        max_fitness = mean_fitness.iloc[max_gen_idx]
-        
-        # Plot mean fitness up to max with full opacity
-        plt.plot(generations[:max_gen_idx+1], mean_fitness[:max_gen_idx+1], 
-                color=colors[i], linewidth=2.5, alpha=1.0, label=f"{net_type}")
-        
-        # Add marker at max point
-        plt.scatter([max_gen], [max_fitness], 
-                   s=120, color=colors[i], marker='o', edgecolor='black',
-                   label=f"{net_type} max at gen {max_gen}", zorder=10)
-        
-        # Add text annotation for max fitness
-        plt.annotate(f"Max: {max_fitness:.2f} at gen {max_gen}", 
-                    xy=(max_gen, max_fitness), 
-                    xytext=(10, 10), textcoords='offset points', 
-                    fontsize=9, color='black', fontweight='bold',
-                    bbox=dict(boxstyle="round,pad=0.3", fc=colors[i], alpha=0.7))
-    
-    plt.xlabel('Generation', fontsize=12)
-    plt.ylabel('Best Fitness', fontsize=12)
-    plt.title('Fitness over Generations by Network Type', fontsize=14)
+        # Get display name for legend
+        display_name = 'MLP-NEAT' if net_type == 'feedforward' else 'KAN-NEAT' if net_type == 'kan' else net_type
+
+        # --- draw every run separately (alpha=0.4, thicker lines) ---
+        for _, run in net_data.groupby(run_cols):
+            run = run.sort_values('generation')
+            plt.plot(
+                run['generation'], run['best_fitness'],
+                color=colors[i], alpha=0.5, linewidth=1.0
+            )
+
+        # --- draw mean curve & highlight its maximum ---
+        mean_fitness = net_data.groupby('generation')['best_fitness'].mean()
+        generations   = mean_fitness.index
+        plt.plot(
+            generations, mean_fitness,
+            color=colors[i], alpha=0.6, linewidth=1.5
+        )
+
+        max_idx      = mean_fitness.argmax()
+        max_gen      = generations[max_idx]
+        max_fit      = mean_fitness.iloc[max_idx]
+
+        plt.plot(
+            generations[:max_idx + 1], mean_fitness[:max_idx + 1],
+            color=colors[i], linewidth=2.5, alpha=1.0,
+            label=f"{display_name}"
+        )
+        plt.scatter(
+            [max_gen], [max_fit], s=120, color=colors[i],
+            marker='o', edgecolor='black', zorder=10
+        )
+        plt.annotate(
+            f"Max: {max_fit:.2f} at gen {max_gen}",
+            xy=(max_gen, max_fit), xytext=(10, 10),
+            textcoords='offset points', fontsize=10,
+            color='black', fontweight='bold',
+            bbox=dict(boxstyle="round,pad=0.3",
+                      fc=colors[i], alpha=0.7)
+        )
+
+    plt.xlabel('Generation', fontsize=14)
+    plt.ylabel('Best Fitness', fontsize=14)
+    plt.title('Fitness over Generations by Method', fontsize=16)
     plt.grid(True, alpha=0.3)
-    
-    # Create custom legend without duplicating entries
-    handles, labels = plt.gca().get_legend_handles_labels()
-    by_label = dict(zip(labels, handles))
-    plt.legend(by_label.values(), by_label.keys(), loc='lower right')
+    plt.legend(loc='lower right', fontsize=12)
     plt.tight_layout()
-    
-    plt.savefig(os.path.join(output_dir, 'fitness_by_network_type.png'), dpi=300, bbox_inches='tight')
+    plt.savefig(os.path.join(output_dir,
+              'fitness_by_network_type.png'),
+              dpi=300, bbox_inches='tight')
     plt.close()
-    
-    # Compare population sizes
+
+    # ---------- SECOND FIGURE: compare population sizes ----------
     population_sizes = sorted(df['population_size'].unique())
-    
-    # Create subplots - one for each network type
-    fig, axes = plt.subplots(1, len(network_types), figsize=(16, 6), sharey=True)
+    fig, axes = plt.subplots(
+        1, len(network_types), figsize=(16, 6), sharey=True
+    )
     if len(network_types) == 1:
-        axes = [axes]  # Make axes iterable even with just one subplot
-    
+        axes = [axes]
+
     for i, net_type in enumerate(network_types):
-        ax = axes[i]
+        ax       = axes[i]
+        net_data = df[df['network_type'] == net_type]
         
+        # Get display name for title
+        display_name = 'MLP-NEAT' if net_type == 'feedforward' else 'KAN-NEAT' if net_type == 'kan' else net_type
+
         for j, pop_size in enumerate(population_sizes):
-            pop_color = plt.cm.viridis(j/max(len(population_sizes)-1, 1))
-            
-            # Get data for this network type and population size
-            pop_data = df[(df['network_type'] == net_type) & (df['population_size'] == pop_size)]
-            
-            if not pop_data.empty:
-                # Plot individual runs with transparency
-                for seed in pop_data['seed'].unique():
-                    seed_data = pop_data[pop_data['seed'] == seed].sort_values('generation')
-                    ax.plot(seed_data['generation'], seed_data['best_fitness'], 
-                          color=pop_color, alpha=0.4, linewidth=0.8)
-                
-                # Calculate mean fitness per generation
-                pop_mean = pop_data.groupby('generation')['best_fitness'].mean()
-                generations = pop_mean.index
-                
-                # Find the generation where maximum fitness is reached
-                max_gen_idx = pop_mean.argmax()
-                max_gen = generations[max_gen_idx]
-                max_fitness = pop_mean.iloc[max_gen_idx]
-                
-                # Plot mean fitness up to max with full opacity
-                ax.plot(generations[:max_gen_idx+1], pop_mean[:max_gen_idx+1], 
-                      color=pop_color, linewidth=2.5, alpha=1.0, label=f"Pop {pop_size}")
-                
-                # Add marker at max point
-                ax.scatter([max_gen], [max_fitness], 
-                         s=80, color=pop_color, marker='o', zorder=10)
-                
-                # Add text annotation for max generation only
-                ax.annotate(f"Gen {max_gen}", 
-                          xy=(max_gen, max_fitness), 
-                          xytext=(5, 0), textcoords='offset points', 
-                          fontsize=8, color=pop_color, fontweight='bold')
-        
-        ax.set_xlabel('Generation', fontsize=11)
-        if i == 0:  # Only add y-label to leftmost subplot
-            ax.set_ylabel('Best Fitness', fontsize=11)
-        ax.set_title(f'{net_type} Network', fontsize=12)
+            pop_color = plt.cm.viridis(
+                j / max(len(population_sizes) - 1, 1)
+            )
+            pop_data = net_data[net_data['population_size'] == pop_size]
+            if pop_data.empty:
+                continue
+
+            # --- draw every run for that pop_size (alpha=0.4, thicker lines) ---
+            for _, run in pop_data.groupby(run_cols):
+                run = run.sort_values('generation')
+                ax.plot(
+                    run['generation'], run['best_fitness'],
+                    color=pop_color, alpha=0.5, linewidth=1.0
+                )
+
+            # --- draw mean curve & highlight its maximum ---
+            pop_mean      = pop_data.groupby('generation')['best_fitness'].mean()
+            generations   = pop_mean.index
+            max_idx       = pop_mean.argmax()
+            max_gen       = generations[max_idx]
+            max_fit       = pop_mean.iloc[max_idx]
+
+            ax.plot(
+                generations[:max_idx + 1], pop_mean[:max_idx + 1],
+                color=pop_color, linewidth=2.5, alpha=1.0,
+                label=f"Pop {pop_size}"
+            )
+            ax.scatter(
+                [max_gen], [max_fit], s=80, color=pop_color,
+                marker='o', zorder=10
+            )
+            ax.annotate(
+                f"Max: {max_fit:.1f} at gen {max_gen}",
+                xy=(max_gen, max_fit), xytext=(5, 0),
+                textcoords='offset points', fontsize=9,
+                color=pop_color, fontweight='bold'
+            )
+
+        ax.set_xlabel('Generation', fontsize=12)
+        if i == 0:
+            ax.set_ylabel('Best Fitness', fontsize=12)
+        ax.set_title(f'{display_name}', fontsize=14)
         ax.grid(True, alpha=0.3)
-        ax.legend(title='Population Size')
-    
+        ax.legend(title='Population Size', fontsize=10)
+
     plt.tight_layout()
-    plt.savefig(os.path.join(output_dir, 'fitness_by_population_size.png'), dpi=300, bbox_inches='tight')
+    plt.savefig(os.path.join(output_dir,
+              'fitness_by_population_size.png'),
+              dpi=300, bbox_inches='tight')
     plt.close()
 
 def generate_summary_table(df, output_dir):

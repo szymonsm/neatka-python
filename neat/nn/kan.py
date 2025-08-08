@@ -94,15 +94,32 @@ class KANNetwork:
             # Apply spline functions to inputs and sum the results
             for input_node, spline_func, weight_s, weight_b in node_inputs:
                 x = self.values[input_node]
-                # Apply the spline transformation
-                # y = spline_func(x)
-                # Apply scaling, bias, and weight
-                transformed_value = weight_b * (x / (1 + np.exp(-x))) + weight_s * spline_func(x)
-                # transformed_value = weight * (scale * y + bias)
+                
+                # Clamp x to prevent numerical overflow
+                x = np.clip(x, -500, 500)
+                
+                # Apply the spline transformation with numerical stability
+                # Compute sigmoid-like component: x / (1 + exp(-x))
+                # Use more stable computation to avoid overflow
+                if x > 0:
+                    sigmoid_part = x / (1 + np.exp(-x))
+                else:
+                    exp_x = np.exp(x)
+                    sigmoid_part = x * exp_x / (1 + exp_x)
+                
+                transformed_value = weight_b * sigmoid_part + weight_s * spline_func(x)
+                
+                # Additional safeguard against extreme values
+                if not np.isfinite(transformed_value):
+                    transformed_value = 0.0
+                    
                 node_sum += transformed_value
                 
-            # Store the summed value
-            self.values[node] = node_sum
+            # Store the summed value with bounds checking
+            if np.isfinite(node_sum):
+                self.values[node] = np.clip(node_sum, -1000, 1000)
+            else:
+                self.values[node] = 0.0
             
         # Return output values
         return [self.values[i] for i in self.output_nodes]

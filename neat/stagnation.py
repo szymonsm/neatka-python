@@ -29,7 +29,7 @@ class DefaultStagnation(DefaultClassConfig):
 
         self.reporters = reporters
 
-    def update(self, species_set, generation):
+    def update(self, species_set, generation, config=None):
         """
         Required interface method. Updates species fitness history information,
         checking for ones that have not improved in max_stagnation generations,
@@ -48,7 +48,17 @@ class DefaultStagnation(DefaultClassConfig):
             s.fitness = self.species_fitness_func(s.get_fitnesses())
             s.fitness_history.append(s.fitness)
             s.adjusted_fitness = None
-            if prev_fitness is None or s.fitness > prev_fitness:
+            
+            # Check if species improved based on fitness criterion
+            improved = False
+            if prev_fitness is None:
+                improved = True
+            elif config and config.fitness_criterion == 'min':
+                improved = s.fitness < prev_fitness
+            else:  # 'max' or 'mean' or no config
+                improved = s.fitness > prev_fitness
+            
+            if improved:
                 s.last_improved = generation
 
             species_data.append((sid, s))

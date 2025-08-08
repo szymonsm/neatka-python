@@ -92,18 +92,38 @@ class Population(object):
                 if g.fitness is None:
                     raise RuntimeError("Fitness not assigned to genome {}".format(g.key))
 
-                if best is None or g.fitness > best.fitness:
+                # Check if this genome is better based on fitness criterion
+                if best is None:
                     best = g
+                elif self.config.fitness_criterion == 'min':
+                    if g.fitness < best.fitness:
+                        best = g
+                else:  # 'max' or 'mean'
+                    if g.fitness > best.fitness:
+                        best = g
             self.reporters.post_evaluate(self.config, self.population, self.species, best)
 
             # Track the best genome ever seen.
-            if self.best_genome is None or best.fitness > self.best_genome.fitness:
+            if self.best_genome is None:
                 self.best_genome = best
+            elif self.config.fitness_criterion == 'min':
+                if best.fitness < self.best_genome.fitness:
+                    self.best_genome = best
+            else:  # 'max' or 'mean'
+                if best.fitness > self.best_genome.fitness:
+                    self.best_genome = best
 
             if not self.config.no_fitness_termination:
                 # End if the fitness threshold is reached.
                 fv = self.fitness_criterion(g.fitness for g in self.population.values())
-                if fv >= self.config.fitness_threshold:
+                # Check threshold based on fitness criterion
+                threshold_met = False
+                if self.config.fitness_criterion == 'min':
+                    threshold_met = fv <= self.config.fitness_threshold
+                else:  # 'max' or 'mean'
+                    threshold_met = fv >= self.config.fitness_threshold
+                
+                if threshold_met:
                     self.reporters.found_solution(self.config, self.generation, best)
                     break
 

@@ -230,12 +230,19 @@ class DefaultGenome(object):
                         sep='\n', file=sys.stderr)
                 self.connect_partial_nodirect(config)
 
-    def configure_crossover(self, genome1, genome2, config):
+    def configure_crossover(self, genome1, genome2, config, fitness_criterion='max'):
         """ Configure a new genome by crossover from two parent genomes. """
-        if genome1.fitness > genome2.fitness:
-            parent1, parent2 = genome1, genome2
-        else:
-            parent1, parent2 = genome2, genome1
+        # Determine better parent based on fitness criterion
+        if fitness_criterion == 'min':
+            if genome1.fitness < genome2.fitness:
+                parent1, parent2 = genome1, genome2
+            else:
+                parent1, parent2 = genome2, genome1
+        else:  # 'max' or 'mean'
+            if genome1.fitness > genome2.fitness:
+                parent1, parent2 = genome1, genome2
+            else:
+                parent1, parent2 = genome2, genome1
 
         # Inherit connection genes
         for key, cg1 in parent1.connections.items():

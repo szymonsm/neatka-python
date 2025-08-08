@@ -96,7 +96,7 @@ class DefaultReproduction(DefaultClassConfig):
         # interfering with the shared fitness scheme.
         all_fitnesses = []
         remaining_species = []
-        for stag_sid, stag_s, stagnant in self.stagnation.update(species, generation):
+        for stag_sid, stag_s, stagnant in self.stagnation.update(species, generation, config):
             if stagnant:
                 self.reporters.species_stagnant(stag_sid, stag_s)
             else:
@@ -150,8 +150,13 @@ class DefaultReproduction(DefaultClassConfig):
             s.members = {}
             species.species[s.key] = s
 
-            # Sort members in order of descending fitness.
-            old_members.sort(reverse=True, key=lambda x: x[1].fitness)
+            # Sort members in order of best fitness (depends on criterion).
+            # For minimization (min), best = lowest, so reverse=False
+            # For maximization (max/mean), best = highest, so reverse=True
+            if config.fitness_criterion == 'min':
+                old_members.sort(reverse=False, key=lambda x: x[1].fitness)  # Ascending (best = lowest)
+            else:
+                old_members.sort(reverse=True, key=lambda x: x[1].fitness)   # Descending (best = highest)
 
             # Transfer elites to new generation.
             if self.reproduction_config.elitism > 0:
@@ -191,7 +196,7 @@ class DefaultReproduction(DefaultClassConfig):
                 # genetically identical clone of the parent (but with a different ID).
                 gid = next(self.genome_indexer)
                 child = config.genome_type(gid)
-                child.configure_crossover(parent1, parent2, config.genome_config)
+                child.configure_crossover(parent1, parent2, config.genome_config, config.fitness_criterion)
                 child.mutate(config.genome_config)
                 # TODO: if config.genome_config.feed_forward, no cycles should exist
                 new_population[gid] = child

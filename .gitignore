@@ -37,3 +37,6 @@ notes.ipynb
 
 results/
 parameter_sweep_results/
+examples/special-functions/model/
+examples/special-functions/special_functions_results/
+Example_1_function_fitting*

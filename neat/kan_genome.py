@@ -486,11 +486,16 @@ class KANGenome(DefaultGenome):
             key = random.choice(list(self.connections.keys()))
             del self.connections[key]
 
-    def configure_crossover(self, parent1, parent2, config):
+    def configure_crossover(self, parent1, parent2, config, fitness_criterion='max'):
         """Configure this genome as a crossover of the two parent genomes."""
 
-        better_parent = parent1 if parent1.fitness > parent2.fitness else parent2
-        worse_parent = parent1 if parent1.fitness <= parent2.fitness else parent2
+        # Determine better parent based on fitness criterion
+        if fitness_criterion == 'min':
+            better_parent = parent1 if parent1.fitness < parent2.fitness else parent2
+            worse_parent = parent1 if parent1.fitness >= parent2.fitness else parent2
+        else:  # 'max' or 'mean'
+            better_parent = parent1 if parent1.fitness > parent2.fitness else parent2
+            worse_parent = parent1 if parent1.fitness <= parent2.fitness else parent2
 
         # Inherit connection genes
         for key, cg1 in better_parent.connections.items():
