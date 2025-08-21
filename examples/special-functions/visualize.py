@@ -152,6 +152,25 @@ def draw_net(config, genome, view=False, filename=None, node_names=None, show_di
     }
     dot = graphviz.Digraph(format=fmt, node_attr=node_attrs)
     
+    # Generate spline plots for KAN networks
+    spline_plots = {}
+    if net_type.lower() == 'kan' and filename:
+        # Create directory for spline plots based on output filename
+        spline_img_path_dir = filename.split("\\")[:-1]
+        # Create a new directory for the spline plots
+        spline_img_path_dir = "\\".join(spline_img_path_dir)
+        spline_img_path_dir = os.path.join(spline_img_path_dir, 'spline_plots')
+        os.makedirs(spline_img_path_dir, exist_ok=True)
+        for cg in genome.connections.values():
+            if (cg.enabled or show_disabled) and hasattr(cg, 'spline_segments') and len(cg.spline_segments) > 0:
+                input_key, output_key = cg.key
+                # Generate plot name
+                plot_file = os.path.join(spline_img_path_dir, f"spline_{input_key}_{output_key}.png")
+                # Generate the plot
+                spline_img_path = _generate_mini_spline_plot(cg, plot_file)
+                if spline_img_path:
+                    spline_plots[cg.key] = spline_img_path
+    
     # Draw input nodes
     for k in config.genome_config.input_keys:
         name = node_names.get(k, str(k))
@@ -193,14 +212,42 @@ def draw_net(config, genome, view=False, filename=None, node_names=None, show_di
             if net_type.lower() == 'kan' and hasattr(cg, 'spline_segments') and len(cg.spline_segments) > 0:
                 # Add an intermediate node for the spline
                 spline_node = f"{input_key}_{output_key}_spline"
-                dot.node(spline_node, 
-                         label=f"SPLINE\n{len(cg.spline_segments)} segments", 
-                         style='filled', 
-                         shape='box', 
-                         fillcolor='yellow', 
-                         fontsize='10',
-                         width='1.0', 
-                         height='1.0')
+                print(spline_plots[cg.key])
+                # If we have a spline plot image, use it in the node
+                if cg.key in spline_plots:
+                    # For formats supporting embedded images
+                    if fmt.lower() == 'png':
+                        dot.node(spline_node, 
+                                 label='',
+                                 style='filled', 
+                                 shape='box', 
+                                 fillcolor='white', 
+                                 fontsize='10',
+                                 width='1.0', 
+                                 height='1.0',
+                                 image=spline_plots[cg.key],
+                                 imagescale='true',
+                                 imagepos='tc')
+                    else:
+                        # For SVG and other formats, use HTML-like label with image
+                        label = f'<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0">' + \
+                                f'<TR><TD><IMG SRC="{spline_plots[cg.key]}"/></TD></TR>' + \
+                                f'<TR><TD>SPLINE<BR/>{len(cg.spline_segments)} segments</TD></TR>' + \
+                                f'</TABLE>>'
+                        
+                        dot.node(spline_node,
+                                 label=label,
+                                 shape='none')
+                else:
+                    # No image version
+                    dot.node(spline_node, 
+                             label=f"SPLINE\n{len(cg.spline_segments)} segments", 
+                             style='filled', 
+                             shape='box', 
+                             fillcolor='yellow', 
+                             fontsize='10',
+                             width='1.0', 
+                             height='1.0')
                 
                 # Connect the spline node
                 dot.edge(a, spline_node, style='solid')
@@ -245,6 +292,319 @@ def draw_net(config, genome, view=False, filename=None, node_names=None, show_di
     
     return dot
 
+def _generate_mini_spline_plot(connection, filename):
+    """Generate a small image of the spline for a connection."""
+    try:
+        # Extract spline points
+        points = [(seg.grid_position, seg.value) 
+                 for seg in connection.spline_segments.values()]
+        
+        if not points:
+            return None
+        
+        # Sort points by x coordinate
+        points.sort(key=lambda x: x[0])
+        
+        # Generate mini plot
+        fig = plt.figure(figsize=(2, 1.5), dpi=100)
+        ax = fig.add_subplot(111)
+        
+        # Create x values for the spline
+        x_min = min(p[0] for p in points) - 0.1
+        x_max = max(p[0] for p in points) + 0.1
+        x = np.linspace(x_min, x_max, 100)
+        
+        # Get the spline function
+        spline_func = connection.get_spline_function()
+        
+        # Evaluate and plot the spline
+        y = [spline_func(xi) for xi in x]
+        ax.plot(x, y, 'b-')
+        
+        # Plot control points
+        x_points, y_points = zip(*points)
+        ax.scatter(x_points, y_points, c='r', marker='o', s=20)
+        
+        # Clean up the plot
+        # ax.set_xticks([])
+        # ax.set_yticks([])
+        # ax.set_title(f"w={connection.weight:.2f}", fontsize=8)
+        
+        # Remove axes and save with transparent background
+        # ax.axis('off')
+        fig.tight_layout(pad=0)
+        fig.savefig(filename, transparent=True, bbox_inches='tight', pad_inches=0)
+        # view the plot
+        plt.close(fig)
+        
+        return filename
+    except Exception as e:
+        print(f"Error generating mini spline plot: {e}")
+        return None
+
+
+# def draw_net(config, genome, node_names, filename, view=False, prune_unused=False, fmt='svg'):
+#     """Create a network visualization using graphviz."""
+#     import graphviz
+    
+#     # Create a new digraph
+#     node_attrs = {
+#         'shape': 'circle',
+#         'fontsize': '9',
+#         'height': '0.2',
+#         'width': '0.2'
+#     }
+#     dot = graphviz.Digraph(format='svg', node_attr=node_attrs)
+    
+#     # Prune the genome if needed
+#     if prune_unused:
+#         if hasattr(genome, 'get_pruned_copy'):
+#             genome = genome.get_pruned_copy(config.genome_config)
+#         else:
+#             print("Warning: Genome doesn't support pruning, using original")
+    
+#     # Draw input nodes
+#     for k in config.genome_config.input_keys:
+#         dot.node(str(k), label=node_names.get(k, str(k)), 
+#                  style='filled', shape='box', fillcolor='lightgray')
+    
+#     # Draw output nodes
+#     for k in config.genome_config.output_keys:
+#         node = genome.nodes.get(k)
+#         if node is not None:
+#             bias = node.bias
+#         else:
+#             bias = 0.0
+#         dot.node(str(k), label=f"{node_names.get(k, str(k))}\nb={bias:.2f}",
+#                 style='filled', shape='box', fillcolor='lightblue')
+    
+#     # Draw hidden nodes
+#     for k in genome.nodes.keys():
+#         if k not in config.genome_config.input_keys and k not in config.genome_config.output_keys:
+#             node = genome.nodes[k]
+#             dot.node(str(k), label=f"{k}\n{node.activation}\nb={node.bias:.2f}",
+#                     style='filled', fillcolor='white')
+    
+#     # Draw connections
+#     for conn in genome.connections.values():
+#         if conn.enabled:
+#             dot.edge(str(conn.key[0]), str(conn.key[1]),
+#                     style='solid', color='green' if conn.weight > 0 else 'red',
+#                     penwidth=str(0.1 + abs(conn.weight / 5.0)),
+#                     label=f"{conn.weight:.2f}")
+#         else:
+#             dot.edge(str(conn.key[0]), str(conn.key[1]),
+#                     style='dotted', color='gray',
+#                     penwidth=str(0.1 + abs(conn.weight / 10.0)),
+#                     label=f"{conn.weight:.2f}")
+    
+#     # Save to file
+#     dot.render(filename, view=view, cleanup=True, format=fmt)
+
+def draw_net(config, genome, view=False, filename=None, node_names=None, show_disabled=True, prune_unused=False,
+             node_colors=None, fmt='svg', net_type='feedforward'):
+    """
+    Draws a neural network with support for both standard feedforward and KAN networks.
+    
+    Args:
+        config: The NEAT configuration object
+        genome: The genome to visualize
+        view: Whether to open the rendered image (default: False)
+        filename: Where to save the rendered image (default: None)
+        node_names: Dictionary of node names keyed by node IDs (default: None)
+        show_disabled: Show disabled connections (default: True)
+        prune_unused: Remove unused nodes and connections (default: False)
+        node_colors: Dictionary of node colors keyed by node IDs (default: None)
+        fmt: Format of the output file, e.g., 'svg', 'png' (default: 'svg')
+        net_type: Type of network, either 'feedforward' or 'kan' (default: 'feedforward')
+    
+    Returns:
+        The graphviz Digraph object
+    """
+    if graphviz is None:
+        warnings.warn("Graphviz is not available.")
+        return
+    
+    # Handle network pruning
+    if prune_unused:
+        if show_disabled:
+            warnings.warn("show_disabled has no effect when prune_unused is True")
+        if hasattr(genome, 'get_pruned_copy'):
+            genome = genome.get_pruned_copy(config.genome_config)
+        else:
+            warnings.warn("This genome doesn't support pruning, using original")
+    
+    # Set up node names and colors
+    node_names = node_names or {}
+    node_colors = node_colors or {}
+    
+    # Create graphviz graph
+    node_attrs = {
+        'shape': 'circle', 'fontsize': '9', 'height': '0.2', 'width': '0.2'
+    }
+    dot = graphviz.Digraph(format=fmt, node_attr=node_attrs)
+    
+    # Generate spline plots for KAN networks
+    spline_plots = {}
+    if net_type.lower() == 'kan' and filename:
+        # Create directory for spline plots based on output filename
+        spline_img_path_dir = filename.split("\\")[:-1]
+        # Create a new directory for the spline plots
+        spline_img_path_dir = "\\".join(spline_img_path_dir)
+        spline_img_path_dir = os.path.join(spline_img_path_dir, 'spline_plots')
+        os.makedirs(spline_img_path_dir, exist_ok=True)
+        for cg in genome.connections.values():
+            if (cg.enabled or show_disabled) and hasattr(cg, 'spline_segments') and len(cg.spline_segments) > 0:
+                input_key, output_key = cg.key
+                # Generate plot name
+                plot_file = os.path.join(spline_img_path_dir, f"spline_{input_key}_{output_key}.png")
+                # Generate the plot
+                spline_img_path = _generate_mini_spline_plot(cg, plot_file)
+                if spline_img_path:
+                    # Convert to absolute path for Graphviz
+                    spline_plots[cg.key] = os.path.abspath(spline_img_path)
+    
+    # Draw input nodes
+    for k in config.genome_config.input_keys:
+        name = node_names.get(k, str(k))
+        dot.node(str(k), label=f"{name}", style='filled', 
+                shape='box', fillcolor=node_colors.get(k, 'lightgray'))
+    
+    # Draw output nodes
+    for k in config.genome_config.output_keys:
+        node = genome.nodes.get(k)
+        name = node_names.get(k, str(k))
+        if node is not None:
+            bias = node.bias
+        else:
+            bias = 0.0
+        dot.node(str(k), label=f"{name}\nb={bias:.2f}", 
+                style='filled', shape='box', fillcolor=node_colors.get(k, 'lightblue'))
+    
+    # Draw hidden nodes
+    for k in genome.nodes.keys():
+        if k not in config.genome_config.input_keys and k not in config.genome_config.output_keys:
+            node = genome.nodes[k]
+            if net_type.lower() == 'feedforward':
+                # For feedforward, show activation function
+                dot.node(str(k), label=f"{k}\n{node.activation}\nb={node.bias:.2f}",
+                        style='filled', fillcolor=node_colors.get(k, 'white'))
+            else:
+                # For KAN, simpler node display
+                dot.node(str(k), label=f"ID:{str(k)}\n∑\nb={node.bias:.2f}", 
+                        style='filled', fillcolor=node_colors.get(k, 'white'))
+    
+    # Draw connections
+    for cg in genome.connections.values():
+        if cg.enabled or show_disabled:
+            input_key, output_key = cg.key
+            a = str(input_key)
+            b = str(output_key)
+            
+            # For KAN networks with splines
+            if net_type.lower() == 'kan' and hasattr(cg, 'spline_segments') and len(cg.spline_segments) > 0:
+                # Add an intermediate node for the spline
+                spline_node = f"{input_key}_{output_key}_spline"
+                # If we have a spline plot image, use it in the node
+                if cg.key in spline_plots:
+                    print(f"Using spline plot: {spline_plots[cg.key]}")
+                    spline_path = spline_plots[cg.key]
+                    
+                    # Convert to forward slashes for Graphviz (works better cross-platform)
+                    spline_path_graphviz = spline_path.replace('\\', '/')
+                    
+                    # Check if file exists
+                    if os.path.exists(spline_path):
+                        # Use image embedding for PNG format
+                        if fmt.lower() == 'png':
+                            dot.node(spline_node, 
+                                     label='',
+                                     style='filled', 
+                                     shape='box', 
+                                     fillcolor='white', 
+                                     fontsize='10',
+                                     width='1.5', 
+                                     height='1.5',
+                                     image=spline_path_graphviz,
+                                     imagescale='true',
+                                     imagepos='mc')
+                        else:
+                            # For SVG, try using the image as background
+                            dot.node(spline_node, 
+                                     label=f"SPLINE\\n{len(cg.spline_segments)} segments",
+                                     style='filled', 
+                                     shape='box', 
+                                     fillcolor='white', 
+                                     fontsize='8',
+                                     width='1.5', 
+                                     height='1.5',
+                                     image=spline_path_graphviz,
+                                     imagescale='true',
+                                     imagepos='mc')
+                    else:
+                        print(f"File does not exist: {spline_path}")
+                        # Fallback to text node
+                        dot.node(spline_node, 
+                                 label=f"SPLINE\\n{len(cg.spline_segments)} segments", 
+                                 style='filled', 
+                                 shape='box', 
+                                 fillcolor='yellow', 
+                                 fontsize='10',
+                                 width='1.0', 
+                                 height='1.0')
+                else:
+                    # No image version
+                    dot.node(spline_node, 
+                             label=f"SPLINE\\n{len(cg.spline_segments)} segments", 
+                             style='filled', 
+                             shape='box', 
+                             fillcolor='yellow', 
+                             fontsize='10',
+                             width='1.0', 
+                             height='1.0')
+                
+                # Connect the spline node
+                dot.edge(a, spline_node, style='solid')
+                
+                # KAN connections use weight_s and weight_b
+                if hasattr(cg, 'weight_s') and hasattr(cg, 'weight_b'):
+                    dot.edge(spline_node, b, 
+                             style='solid' if cg.enabled else 'dotted', 
+                             color='green' if cg.weight_s > 0 else 'red', 
+                             penwidth=str(0.1 + abs(cg.weight_s)),
+                             label=f"ws={cg.weight_s:.2f}\nwb={cg.weight_b:.2f}")
+                else:
+                    # Fallback to weight if KAN attributes not found
+                    dot.edge(spline_node, b, 
+                             style='solid' if cg.enabled else 'dotted', 
+                             color='green' if cg.weight > 0 else 'red', 
+                             penwidth=str(0.1 + abs(cg.weight / 5.0)),
+                             label=f"w={cg.weight:.2f}")
+                             
+            else:
+                # Regular connection (either feedforward or KAN without splines)
+                if net_type.lower() == 'kan' and hasattr(cg, 'weight_s'):
+                    # Use KAN-specific weights if available
+                    style = 'solid' if cg.enabled else 'dotted'
+                    color = 'green' if cg.weight_s > 0 else 'red'
+                    width = str(0.1 + abs(cg.weight_s / 5.0))
+                    label = f"ws={cg.weight_s:.2f}, wb={cg.weight_b:.2f}" if show_disabled else ''
+                    
+                    dot.edge(a, b, style=style, color=color, penwidth=width, label=label)
+                else:
+                    # Use standard NEAT weights
+                    style = 'solid' if cg.enabled else 'dotted'
+                    color = 'green' if cg.weight > 0 else 'red' if cg.enabled else 'gray'
+                    width = str(0.1 + abs(cg.weight / 5.0)) if cg.enabled else str(0.1 + abs(cg.weight / 10.0))
+                    label = f"{cg.weight:.2f}" if show_disabled else ''
+                    
+                    dot.edge(a, b, style=style, color=color, penwidth=width, label=label)
+    
+    # Render the graph
+    if filename:
+        dot.render(filename, view=view, cleanup=True)
+    
+    return dot
 
 def plot_kan_splines(genome, config, filename="kan_splines.png", view=False):
     """
@@ -282,69 +642,64 @@ def plot_kan_splines(genome, config, filename="kan_splines.png", view=False):
         ax = fig.add_subplot(rows, cols, i+1)
         
         # Get spline points
-        if hasattr(conn, 'spline_segments'):
-            points = [(seg.grid_position, seg.value) 
-                    for seg in conn.spline_segments.values()]
+        points = [(seg.grid_position, seg.value) 
+                 for seg in conn.spline_segments.values()]
+        
+        # Handle connections with no spline points
+        if not points:
+            ax.text(0.5, 0.5, "No spline points", 
+                    horizontalalignment='center', verticalalignment='center',
+                    transform=ax.transAxes)
+            ax.set_title(f"Connection {conn.key}")
+            continue
             
-            # Handle connections with no spline points
-            if not points:
-                ax.text(0.5, 0.5, "No spline points", 
-                        horizontalalignment='center', verticalalignment='center',
-                        transform=ax.transAxes)
-                ax.set_title(f"Connection {conn.key}")
-                continue
+        points.sort(key=lambda x: x[0])
+        
+        # Create x values for plotting
+        try:
+            x_min = config.spline_range_min
+            x_max = config.spline_range_max
+        except AttributeError:
+            x_min = -1.0
+            x_max = 1.0
+            
+        x = np.linspace(x_min, x_max, 100)
+        
+        try:
+            # Get the spline function
+            if hasattr(conn, 'get_spline_function'):
+                spline_func = conn.get_spline_function()
+                print(f"Using get_spline_function for connection {conn.key}")
+            else:
+                # Create a simple function if method doesn't exist
+                from neat.nn.kan import SplineFunctionImpl
+                spline_func = SplineFunctionImpl(points)
+                print(f"Creating SplineFunctionImpl for connection {conn.key}")
                 
-            points.sort(key=lambda x: x[0])
-            
-            # Create x values for plotting
-            try:
-                x_min = config.spline_range_min
-                x_max = config.spline_range_max
-            except AttributeError:
-                x_min = -1.0
-                x_max = 1.0
-                
-            x = np.linspace(x_min, x_max, 100)
-            
-            try:
-                # Get the spline function
-                if hasattr(conn, 'get_spline_function'):
-                    spline_func = conn.get_spline_function()
-                    print(f"Using get_spline_function for connection {conn.key}")
-                else:
-                    # Create a simple function if method doesn't exist
-                    print(f"Creating simple spline function for connection {conn.key}")
-                    # Simple linear interpolation between points
-                    def spline_func(x_val):
-                        if not points:
-                            return 0.0
-                        x_points, y_points = zip(*points)
-                        return np.interp(x_val, x_points, y_points)
+            # Plot the spline if we have points
+            y = []
+            for xi in x:
+                try:
+                    y.append(spline_func(xi))
+                except Exception as e:
+                    print(f"Error evaluating spline at x={xi}: {str(e)}")
+                    y.append(0.0)
                     
-                # Plot the spline if we have points
-                y = []
-                for xi in x:
-                    try:
-                        y.append(spline_func(xi))
-                    except Exception as e:
-                        print(f"Error evaluating spline at x={xi}: {str(e)}")
-                        y.append(0.0)
-                        
-                # Always use ax for plotting in subplots
-                ax.plot(x, y)
-                
-                # Plot control points
-                x_points, y_points = zip(*points)
-                ax.scatter(x_points, y_points, c='r', marker='o')
-                
-            except Exception as e:
-                print(f"Error plotting spline for connection {conn.key}: {str(e)}")
-                ax.text(0.5, 0.5, f"Error: {str(e)}", 
-                        horizontalalignment='center', verticalalignment='center',
-                        transform=ax.transAxes)
-        else:
-            ax.text(0.5, 0.5, "Not a KAN connection", 
-                    horizontalalignment='center', verticalalignment='center', 
+            # Always use ax for plotting in subplots
+            ax.plot(x, y)
+            
+            # Plot control points
+            x_points, y_points = zip(*points)
+            ax.scatter(x_points, y_points, c='r', marker='o')
+
+            # print(f"x={x}")
+            # print(f"y={y}")
+            # print(f"points={points}")
+            
+        except Exception as e:
+            print(f"Error plotting spline for connection {conn.key}: {str(e)}")
+            ax.text(0.5, 0.5, f"Error: {str(e)}", 
+                    horizontalalignment='center', verticalalignment='center',
                     transform=ax.transAxes)
         
         # Add connection info - use ax for all labels
@@ -352,7 +707,7 @@ def plot_kan_splines(genome, config, filename="kan_splines.png", view=False):
         ax.set_xlabel("Input")
         ax.set_ylabel("Output")
         ax.grid(True)
-    
+        print(f"Plotted spline for connection {conn.key}")
     fig.tight_layout()
     try:
         fig.savefig(filename)
@@ -365,6 +720,73 @@ def plot_kan_splines(genome, config, filename="kan_splines.png", view=False):
     else:
         plt.close()
 
+# def analyze_kan_genome(genome, config, node_names=None):
+#     """Print detailed information about a KAN genome."""
+#     print(f"Genome ID: {genome.key}")
+#     print(f"Fitness: {genome.fitness}")
+#     print(f"Nodes: {len(genome.nodes)}")
+#     print(f"Connections: {len(genome.connections)}")
+    
+#     # Count enabled connections
+#     enabled_connections = [c for c in genome.connections.values() if c.enabled]
+#     print(f"Enabled connections: {len(enabled_connections)}")
+
+#     # Print node information
+#     for k in config.input_keys:
+#         print(f"  Input Node: {node_names.get(k, str(k))} ({k})")
+    
+#     # Print hidden Node information
+#     for k in genome.nodes.keys():
+#         if k not in config.input_keys and k not in config.output_keys:
+#             print(f"  Hidden Node {genome.nodes[k]}")
+
+#     # Print output node information
+#     for k in config.output_keys:
+#         print(f"  Output Node {node_names.get(k, str(k))} ({k}): {genome.nodes[k].bias:.3f}")
+    
+#     # Print spline information
+#     total_segments = 0
+#     for key, conn in genome.connections.items():
+#         if conn.enabled:
+#             n_segments = len(conn.spline_segments)
+#             total_segments += n_segments
+#             print(f"  Connection {key}: {n_segments} segments, weight_s={conn.weight_s:.3f}, weight_b={conn.weight_b:.3f}")
+    
+#     print(f"Total spline segments: {total_segments}")
+
+# def analyze_feedforward_genome(genome, config, node_names=None):
+#     """Print detailed information about a feedforward genome."""
+#     print(f"Genome ID: {genome.key}")
+#     print(f"Fitness: {genome.fitness}")
+#     print(f"Nodes: {len(genome.nodes)}")
+#     print(f"Connections: {len(genome.connections)}")
+    
+#     # Count enabled connections
+#     enabled_connections = len([c for c in genome.connections.values() if c.enabled])
+#     print(f"Enabled connections: {enabled_connections}")
+
+#     # Print node information
+#     for k in config.input_keys:
+#         print(f"  Input Node: {node_names.get(k, str(k))} ({k})")
+    
+#     # Print hidden Node information
+#     for k in genome.nodes.keys():
+#         if k not in config.input_keys and k not in config.output_keys:
+#             print(f"  Hidden Node {k}: bias={genome.nodes[k].bias:.3f}, response={genome.nodes[k].response:.3f}")
+#             print(f"    activation: {genome.nodes[k].activation}")
+#             print(f"    aggregation: {genome.nodes[k].aggregation}")
+
+#     # Print output node information
+#     for k in config.output_keys:
+#         print(f"  Output Node {node_names.get(k, str(k))} ({k}): bias={genome.nodes[k].bias:.3f}, response={genome.nodes[k].response:.3f}")
+#         print(f"    activation: {genome.nodes[k].activation}")
+#         print(f"    aggregation: {genome.nodes[k].aggregation}")
+    
+#     # Print connection information
+#     print("\nConnections:")
+#     for key, conn in genome.connections.items():
+#         if conn.enabled:
+#             print(f"  Connection {key}: weight={conn.weight:.3f}")
 
 def analyze_genome(genome, config, node_names=None, net_type='feedforward'):
     """
@@ -443,107 +865,3 @@ def analyze_genome(genome, config, node_names=None, net_type='feedforward'):
     print(f"  Hidden nodes: {num_hidden}")
     print(f"  Total connections: {len(genome.connections)}")
     print(f"  Enabled connections: {len(enabled_connections)}")
-
-
-def plot_function_approximation(winner, config, test_data, results_dir, net_type='feedforward', function_name=''):
-    """
-    Plot the function approximation results.
-    
-    Args:
-        winner: The winning genome
-        config: Configuration object
-        test_data: Dictionary with test data
-        results_dir: Directory to save plots
-        net_type: Type of network
-        function_name: Name of the function being approximated
-    """
-    try:
-        # Create network from winner
-        if net_type.lower() == 'feedforward':
-            from neat.nn import FeedForwardNetwork
-            net = FeedForwardNetwork.create(winner, config)
-        else:
-            from neat.nn.kan import KANNetwork
-            net = KANNetwork.create(winner, config)
-        
-        X_test = test_data['X_test']
-        y_test = test_data['y_test']
-        
-        # Get predictions
-        predictions = []
-        for i in range(len(X_test)):
-            try:
-                output = net.activate(X_test[i])
-                if isinstance(output, (list, tuple)):
-                    output = output[0]
-                predictions.append(float(output))
-            except:
-                predictions.append(0.0)
-        
-        predictions = np.array(predictions)
-        
-        # Create 2D visualization if possible
-        if X_test.shape[1] == 2:
-            fig = plt.figure(figsize=(15, 5))
-            
-            # Plot 1: True function
-            ax1 = fig.add_subplot(131, projection='3d')
-            ax1.scatter(X_test[:, 0], X_test[:, 1], y_test, c='blue', alpha=0.6, s=1)
-            ax1.set_title(f'True Function: {function_name}')
-            ax1.set_xlabel('X')
-            ax1.set_ylabel('Y')
-            ax1.set_zlabel('Output')
-            
-            # Plot 2: Network prediction
-            ax2 = fig.add_subplot(132, projection='3d')
-            ax2.scatter(X_test[:, 0], X_test[:, 1], predictions, c='red', alpha=0.6, s=1)
-            ax2.set_title(f'{net_type.upper()} Prediction')
-            ax2.set_xlabel('X')
-            ax2.set_ylabel('Y')
-            ax2.set_zlabel('Output')
-            
-            # Plot 3: Error
-            ax3 = fig.add_subplot(133)
-            errors = np.abs(predictions - y_test)
-            ax3.scatter(X_test[:, 0], X_test[:, 1], c=errors, cmap='viridis', alpha=0.6, s=1)
-            ax3.set_title('Absolute Error')
-            ax3.set_xlabel('X')
-            ax3.set_ylabel('Y')
-            plt.colorbar(ax3.collections[0], ax=ax3)
-            
-            plt.tight_layout()
-            plt.savefig(os.path.join(results_dir, 'function_approximation_3d.png'), dpi=300)
-            plt.close()
-        
-        # Always create scatter plot comparison
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
-        
-        # Scatter plot: predicted vs true
-        ax1.scatter(y_test, predictions, alpha=0.6, s=1)
-        min_val = min(np.min(y_test), np.min(predictions))
-        max_val = max(np.max(y_test), np.max(predictions))
-        ax1.plot([min_val, max_val], [min_val, max_val], 'r--', label='Perfect prediction')
-        ax1.set_xlabel('True values')
-        ax1.set_ylabel('Predicted values')
-        ax1.set_title(f'{net_type.upper()} vs True Values')
-        ax1.legend()
-        ax1.grid(True)
-        
-        # Error distribution
-        errors = predictions - y_test
-        ax2.hist(errors, bins=50, alpha=0.7)
-        ax2.set_xlabel('Prediction Error')
-        ax2.set_ylabel('Frequency')
-        ax2.set_title('Error Distribution')
-        ax2.axvline(0, color='red', linestyle='--', label='Perfect prediction')
-        ax2.legend()
-        ax2.grid(True)
-        
-        plt.tight_layout()
-        plt.savefig(os.path.join(results_dir, 'function_approximation_2d.png'), dpi=300)
-        plt.close()
-        
-        print(f"Function approximation plots saved to {results_dir}")
-        
-    except Exception as e:
-        print(f"Error creating function approximation plots: {e}")

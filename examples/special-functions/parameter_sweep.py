@@ -372,11 +372,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run parameter sweep on special functions')
     parser.add_argument('--functions', nargs='+', 
                       choices=special_functions.list_functions(),
-                      default=['ellipj', 'jv', 'lpmv_1'],  # 3 specified functions
+                    #   default=['ellipj', 'jv', 'lpmv_1'],  # 3 specified functions
+                      default=['lpmv_1'],
                       help='Functions to test (default: ellipj, jv, lpmv_1)')
     parser.add_argument('--methods', nargs='+', 
                       choices=['mlp-neat', 'kan-neat', 'pykan'],
-                      default=['kan-neat', 'pykan'],  # Only KAN-NEAT and PyKAN
+                    #   default=['kan-neat', 'pykan'],  # Only KAN-NEAT and PyKAN
+                      default=['pykan'],
                       help='Methods to test')
     parser.add_argument('--seeds', nargs='+', type=int,
                       default=[42, 123, 456, 789, 1000],  # 5 seeds as requested
@@ -387,7 +389,7 @@ if __name__ == "__main__":
                       help='Number of training samples')
     parser.add_argument('--results-dir', type=str, default='special_functions_results',
                       help='Directory to save results')
-    parser.add_argument('--pykan-width', nargs='+', type=int, default=[2, 5, 1],
+    parser.add_argument('--pykan-width', nargs='+', type=int, default=[2, 4, 1],
                       help='PyKAN network width')
     parser.add_argument('--pykan-max-grid', type=int, default=50,
                       help='PyKAN maximum grid size')
