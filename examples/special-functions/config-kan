@@ -44,15 +44,6 @@ aggregation_default     = sum
 aggregation_options     = sum
 aggregation_mutate_rate = 0.0
 
-# Standard connection parameters
-; weight_init_mean        = 0.0
-; weight_init_stdev       = 1.0
-; weight_max_value        = 1
-; weight_min_value        = 1
-; weight_mutate_rate      = 0.8
-; weight_mutate_power     = 0.5
-; weight_replace_rate     = 0.1
-
 # Node bias parameters
 bias_init_mean          = 0.0
 bias_init_stdev         = 1.0

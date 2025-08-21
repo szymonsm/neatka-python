@@ -6,10 +6,7 @@ import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
-from pathlib import Path
 import argparse
-import json
 
 def load_results(results_dir):
     """Load consolidated results from the given directory."""
@@ -82,7 +79,7 @@ def plot_convergence_distribution(df, output_dir, target_fitness=60.0):
         if net_type == 'feedforward':
             colors.append('blue')
         elif net_type == 'kan':
-            colors.append('#ff7f0e')  # Orange color from Set1
+            colors.append('#ff7f0e')
         else:
             colors.append('gray')
 
@@ -116,7 +113,7 @@ def plot_convergence_distribution(df, output_dir, target_fitness=60.0):
                    bbox=dict(facecolor='white', alpha=0.7, boxstyle='round,pad=0.3'))
     
     # Set x-axis limits to avoid negative values
-    plt.xlim(0, max_gen * 1.1 if max_gen > 0 else 100)  # Add 10% padding to the right
+    plt.xlim(0, max_gen * 1.1 if max_gen > 0 else 100)
     
     plt.xlabel('Generations to Reach Fitness ≥ 60', fontsize=14)
     plt.ylabel('Number of Experiments', fontsize=14)
@@ -156,8 +153,8 @@ def plot_convergence_failure_analysis(df, summary_df, output_dir, target_fitness
     
     # Prepare data for the plot
     success_counts = []
-    convergence_failure_counts = []  # Ran but didn't reach target fitness
-    runtime_failure_counts = []      # Failed to complete (status="failed")
+    convergence_failure_counts = []
+    runtime_failure_counts = []
     total_counts = []
     
     for net_type in network_types:
@@ -427,9 +424,6 @@ def plot_fitness_by_hidden_nodes(df: pd.DataFrame, output_dir: str) -> None:
 
     os.makedirs(output_dir, exist_ok=True)
 
-    # ------------------------------------------------------------------
-    # FIRST FIGURE: evolution curves
-    # ------------------------------------------------------------------
     network_types      = sorted(df['network_type'].unique())
     hidden_node_counts = sorted(df['num_hidden'].unique())
 
@@ -508,9 +502,6 @@ def plot_fitness_by_hidden_nodes(df: pd.DataFrame, output_dir: str) -> None:
                 dpi=300, bbox_inches='tight')
     plt.close()
 
-    # ------------------------------------------------------------------
-    # SECOND FIGURE: comparative bar-chart of final performance
-    # ------------------------------------------------------------------
     plt.figure(figsize=(12, 8))
     max_fitness_by_config = {}
 
@@ -520,7 +511,7 @@ def plot_fitness_by_hidden_nodes(df: pd.DataFrame, output_dir: str) -> None:
         if net_type == 'feedforward':
             bar_colors.append('blue')
         elif net_type == 'kan':
-            bar_colors.append('#ff7f0e')  # Orange color from Set1
+            bar_colors.append('#ff7f0e')
         else:
             bar_colors.append('gray')
 
@@ -632,7 +623,6 @@ def plot_fitness_over_generations(df: pd.DataFrame, output_dir: str) -> None:
 
     os.makedirs(output_dir, exist_ok=True)
 
-    # ---------- FIRST FIGURE: compare network types ----------
     network_types = sorted(df['network_type'].unique())
     plt.figure(figsize=(12, 7))
     
@@ -709,7 +699,6 @@ def plot_fitness_over_generations(df: pd.DataFrame, output_dir: str) -> None:
               dpi=300, bbox_inches='tight')
     plt.close()
 
-    # ---------- SECOND FIGURE: compare population sizes ----------
     population_sizes = sorted(df['population_size'].unique())
     fig, axes = plt.subplots(
         1, len(network_types), figsize=(16, 6), sharey=True

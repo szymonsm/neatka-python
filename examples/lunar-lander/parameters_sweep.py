@@ -14,7 +14,6 @@ import multiprocessing
 import time
 import copy
 import hashlib
-from pathlib import Path
 
 # Parameters to sweep
 PARAMETERS = {

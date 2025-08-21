@@ -7,7 +7,6 @@ import os
 import pickle
 import traceback
 import argparse
-import random
 import numpy as np
 import json
 
@@ -15,7 +14,6 @@ import neat
 import special_functions
 import visualize
 
-# Conditionally import KAN modules
 try:
     from neat.nn.kan import KANNetwork
     from neat.kan_genome import KANGenome

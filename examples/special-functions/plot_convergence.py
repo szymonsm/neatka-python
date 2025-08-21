@@ -5,10 +5,9 @@ Convergence plots comparing KAN-NEAT and PyKAN training across all functions.
 
 import os
 import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
 import glob
-from typing import Dict, List, Tuple
+from typing import Dict
 
 def load_best_results(filepath: str) -> pd.DataFrame:
     """Load the best results per function and method."""

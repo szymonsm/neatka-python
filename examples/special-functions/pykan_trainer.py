@@ -9,10 +9,9 @@ import time
 import numpy as np
 import torch
 import pickle
-from pathlib import Path
 
 try:
-    from kan import KAN, create_dataset
+    from kan import KAN
     PYKAN_AVAILABLE = True
 except ImportError:
     PYKAN_AVAILABLE = False

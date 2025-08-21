@@ -1,4 +1,3 @@
-import copy
 import warnings
 import os
 
@@ -108,106 +107,6 @@ def plot_species(statistics, view=False, filename='speciation.svg'):
 
     plt.close()
 
-
-# def draw_kan_net(config, genome, view=False, filename=None, node_names=None, show_disabled=True, prune_unused=False,
-#                  node_colors=None, fmt='svg'):
-#     """Draws a neural network with KAN-specific spline visualizations."""
-#     if graphviz is None:
-#         warnings.warn("Graphviz is not available.")
-#         return
-    
-#     if prune_unused:
-#         if show_disabled:
-#             warnings.warn("show_disabled has no effect when prune_unused is True")
-#         genome = genome.get_pruned_copy(config.genome_config)
-    
-#     node_names = node_names or {}
-#     node_colors = node_colors or {}
-    
-#     node_attrs = {
-#         'shape': 'circle', 'fontsize': '9', 'height': '0.2', 'width': '0.2'
-#     }
-#     dot = graphviz.Digraph(format=fmt, node_attr=node_attrs)
-    
-#     # Generate mini spline plots and store their paths
-#     spline_plots = {}
-#     # Drop the last part of the filename to get the directory
-#     spline_img_path_dir = filename.split("\\")[:-1]
-#     # Create a new directory for the spline plots
-#     spline_img_path_dir = "\\".join(spline_img_path_dir)
-#     spline_img_path_dir = os.path.join(spline_img_path_dir, 'spline_plots')
-#     os.makedirs(spline_img_path_dir, exist_ok=True)
-#     for cg in genome.connections.values():
-#         if (cg.enabled or show_disabled) and hasattr(cg, 'spline_segments') and len(cg.spline_segments) > 0:
-#             input_key, output_key = cg.key
-#             spline_img_path = _generate_mini_spline_plot(cg, os.path.join(spline_img_path_dir, f"spline_{input_key}_{output_key}.png"))
-#             if spline_img_path:
-#                 spline_plots[cg.key] = spline_img_path
-#     # Draw input and output nodes
-#     for k in config.genome_config.input_keys:
-#         dot.node(node_names.get(k, str(k)), label=f"{node_names.get(k, str(k))}", style='filled', shape='box', fillcolor=node_colors.get(k, 'lightgray'))
-#     for k in config.genome_config.output_keys:
-#         dot.node(node_names.get(k, str(k)), label=f"{node_names.get(k, str(k))}\nb={genome.nodes.get(k, str(k)).bias:.2f}", style='filled', fillcolor=node_colors.get(k, 'lightblue'))
-    
-#     # Draw hidden nodes
-#     for n in genome.nodes.keys():
-#         if n not in config.genome_config.input_keys and n not in config.genome_config.output_keys:
-#             dot.node(str(n), label=f"ID:{str(n)}\n∑\nb={genome.nodes[k].bias:.2f}", style='filled', fillcolor=node_colors.get(n, 'white'))
-    
-#     # Draw connections, including KAN-specific splines
-#     for cg in genome.connections.values():
-#         if cg.enabled or show_disabled:
-#             input_key, output_key = cg.key
-#             a = node_names.get(input_key, str(input_key))
-#             b = node_names.get(output_key, str(output_key))
-            
-#             if hasattr(cg, 'spline_segments') and len(cg.spline_segments) > 0:
-#                 # Add an intermediate node for the spline
-#                 spline_node = f"{input_key}_{output_key}_spline"
-
-#                 print(spline_plots[cg.key])
-                
-#                 # If we have a spline plot image, use it in the node
-#                 if cg.key in spline_plots:
-#                     dot.node(spline_node, 
-#                              label='',
-#                              style='filled', 
-#                              shape='box', 
-#                              fillcolor='white', 
-#                              fontsize='10',
-#                              width='1.0', 
-#                              height='1.0',
-#                              image=spline_plots[cg.key],
-#                              imagescale='true',
-#                              imagepos='tc')
-#                 else:
-#                     dot.node(spline_node, 
-#                              label=f"SPLINE\n{len(cg.spline_segments)} segments", 
-#                              style='filled', 
-#                              shape='box', 
-#                              fillcolor='yellow', 
-#                              fontsize='10',
-#                              width='1.0', 
-#                              height='1.0')
-                
-#                 dot.edge(a, spline_node, style='solid')
-#                 dot.edge(spline_node, b, 
-#                          style='solid' if cg.enabled else 'dotted', 
-#                          color='green' if cg.weight_s > 0 else 'red', 
-#                          penwidth=str(0.1 + abs(cg.weight_s)),
-#                          label=f"weight_s={cg.weight_s:.2f}\nweight_b={cg.weight_b:.2f}")
-#             else:
-#                 # Regular connection
-#                 dot.edge(a, b, 
-#                          style='solid' if cg.enabled else 'dotted', 
-#                          color='green' if cg.weight_s > 0 else 'red', 
-#                          penwidth=str(0.1 + abs(cg.weight_s / 5.0)))
-    
-#     if filename:
-#         dot.render(filename, view=view, format=fmt, cleanup=True)
-    
-#     return dot
-
 def _generate_mini_spline_plot(connection, filename):
     """Generate a small image of the spline for a connection."""
     try:
@@ -241,13 +140,6 @@ def _generate_mini_spline_plot(connection, filename):
         x_points, y_points = zip(*points)
         ax.scatter(x_points, y_points, c='r', marker='o', s=20)
         
-        # Clean up the plot
-        # ax.set_xticks([])
-        # ax.set_yticks([])
-        # ax.set_title(f"w={connection.weight:.2f}", fontsize=8)
-        
-        # Remove axes and save with transparent background
-        # ax.axis('off')
         fig.tight_layout(pad=0)
         fig.savefig(filename, transparent=True, bbox_inches='tight', pad_inches=0)
         # view the plot
@@ -257,65 +149,6 @@ def _generate_mini_spline_plot(connection, filename):
     except Exception as e:
         print(f"Error generating mini spline plot: {e}")
         return None
-
-
-# def draw_net(config, genome, node_names, filename, view=False, prune_unused=False, fmt='svg'):
-#     """Create a network visualization using graphviz."""
-#     import graphviz
-    
-#     # Create a new digraph
-#     node_attrs = {
-#         'shape': 'circle',
-#         'fontsize': '9',
-#         'height': '0.2',
-#         'width': '0.2'
-#     }
-#     dot = graphviz.Digraph(format='svg', node_attr=node_attrs)
-    
-#     # Prune the genome if needed
-#     if prune_unused:
-#         if hasattr(genome, 'get_pruned_copy'):
-#             genome = genome.get_pruned_copy(config.genome_config)
-#         else:
-#             print("Warning: Genome doesn't support pruning, using original")
-    
-#     # Draw input nodes
-#     for k in config.genome_config.input_keys:
-#         dot.node(str(k), label=node_names.get(k, str(k)), 
-#                  style='filled', shape='box', fillcolor='lightgray')
-    
-#     # Draw output nodes
-#     for k in config.genome_config.output_keys:
-#         node = genome.nodes.get(k)
-#         if node is not None:
-#             bias = node.bias
-#         else:
-#             bias = 0.0
-#         dot.node(str(k), label=f"{node_names.get(k, str(k))}\nb={bias:.2f}",
-#                 style='filled', shape='box', fillcolor='lightblue')
-    
-#     # Draw hidden nodes
-#     for k in genome.nodes.keys():
-#         if k not in config.genome_config.input_keys and k not in config.genome_config.output_keys:
-#             node = genome.nodes[k]
-#             dot.node(str(k), label=f"{k}\n{node.activation}\nb={node.bias:.2f}",
-#                     style='filled', fillcolor='white')
-    
-#     # Draw connections
-#     for conn in genome.connections.values():
-#         if conn.enabled:
-#             dot.edge(str(conn.key[0]), str(conn.key[1]),
-#                     style='solid', color='green' if conn.weight > 0 else 'red',
-#                     penwidth=str(0.1 + abs(conn.weight / 5.0)),
-#                     label=f"{conn.weight:.2f}")
-#         else:
-#             dot.edge(str(conn.key[0]), str(conn.key[1]),
-#                     style='dotted', color='gray',
-#                     penwidth=str(0.1 + abs(conn.weight / 10.0)),
-#                     label=f"{conn.weight:.2f}")
-    
-#     # Save to file
-#     dot.render(filename, view=view, cleanup=True, format=fmt)
 
 def draw_net(config, genome, view=False, filename=None, node_names=None, show_disabled=True, prune_unused=False,
              node_colors=None, fmt='svg', net_type='feedforward'):
@@ -584,10 +417,6 @@ def plot_kan_splines(genome, config, filename="kan_splines.png", view=False):
             # Plot control points
             x_points, y_points = zip(*points)
             ax.scatter(x_points, y_points, c='r', marker='o')
-
-            # print(f"x={x}")
-            # print(f"y={y}")
-            # print(f"points={points}")
             
         except Exception as e:
             print(f"Error plotting spline for connection {conn.key}: {str(e)}")
@@ -612,74 +441,6 @@ def plot_kan_splines(genome, config, filename="kan_splines.png", view=False):
         plt.show()
     else:
         plt.close()
-
-# def analyze_kan_genome(genome, config, node_names=None):
-#     """Print detailed information about a KAN genome."""
-#     print(f"Genome ID: {genome.key}")
-#     print(f"Fitness: {genome.fitness}")
-#     print(f"Nodes: {len(genome.nodes)}")
-#     print(f"Connections: {len(genome.connections)}")
-    
-#     # Count enabled connections
-#     enabled_connections = [c for c in genome.connections.values() if c.enabled]
-#     print(f"Enabled connections: {len(enabled_connections)}")
-
-#     # Print node information
-#     for k in config.input_keys:
-#         print(f"  Input Node: {node_names.get(k, str(k))} ({k})")
-    
-#     # Print hidden Node information
-#     for k in genome.nodes.keys():
-#         if k not in config.input_keys and k not in config.output_keys:
-#             print(f"  Hidden Node {genome.nodes[k]}")
-
-#     # Print output node information
-#     for k in config.output_keys:
-#         print(f"  Output Node {node_names.get(k, str(k))} ({k}): {genome.nodes[k].bias:.3f}")
-    
-#     # Print spline information
-#     total_segments = 0
-#     for key, conn in genome.connections.items():
-#         if conn.enabled:
-#             n_segments = len(conn.spline_segments)
-#             total_segments += n_segments
-#             print(f"  Connection {key}: {n_segments} segments, weight_s={conn.weight_s:.3f}, weight_b={conn.weight_b:.3f}")
-    
-#     print(f"Total spline segments: {total_segments}")
-
-# def analyze_feedforward_genome(genome, config, node_names=None):
-#     """Print detailed information about a feedforward genome."""
-#     print(f"Genome ID: {genome.key}")
-#     print(f"Fitness: {genome.fitness}")
-#     print(f"Nodes: {len(genome.nodes)}")
-#     print(f"Connections: {len(genome.connections)}")
-    
-#     # Count enabled connections
-#     enabled_connections = len([c for c in genome.connections.values() if c.enabled])
-#     print(f"Enabled connections: {enabled_connections}")
-
-#     # Print node information
-#     for k in config.input_keys:
-#         print(f"  Input Node: {node_names.get(k, str(k))} ({k})")
-    
-#     # Print hidden Node information
-#     for k in genome.nodes.keys():
-#         if k not in config.input_keys and k not in config.output_keys:
-#             print(f"  Hidden Node {k}: bias={genome.nodes[k].bias:.3f}, response={genome.nodes[k].response:.3f}")
-#             print(f"    activation: {genome.nodes[k].activation}")
-#             print(f"    aggregation: {genome.nodes[k].aggregation}")
-
-#     # Print output node information
-#     for k in config.output_keys:
-#         print(f"  Output Node {node_names.get(k, str(k))} ({k}): bias={genome.nodes[k].bias:.3f}, response={genome.nodes[k].response:.3f}")
-#         print(f"    activation: {genome.nodes[k].activation}")
-#         print(f"    aggregation: {genome.nodes[k].aggregation}")
-    
-#     # Print connection information
-#     print("\nConnections:")
-#     for key, conn in genome.connections.items():
-#         if conn.enabled:
-#             print(f"  Connection {key}: weight={conn.weight:.3f}")
 
 def analyze_genome(genome, config, node_names=None, net_type='feedforward'):
     """

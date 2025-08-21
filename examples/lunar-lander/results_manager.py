@@ -4,8 +4,6 @@ Manages results from experiments, ensuring proper organization and reproducibili
 import os
 import hashlib
 import json
-import random
-import time
 import sys
 from datetime import datetime
 
@@ -65,15 +63,6 @@ def get_config_hash(config, seed=None):
             'aggregation_default': config.genome_config.aggregation_default,
             'aggregation_options': list(config.genome_config.aggregation_options),
             'aggregation_mutate_rate': config.genome_config.aggregation_mutate_rate,
-            
-            # Standard connection parameters
-            # 'weight_init_mean': config.genome_config.weight_init_mean,
-            # 'weight_init_stdev': config.genome_config.weight_init_stdev,
-            # 'weight_max_value': config.genome_config.weight_max_value,
-            # 'weight_min_value': config.genome_config.weight_min_value,
-            # 'weight_mutate_rate': config.genome_config.weight_mutate_rate,
-            # 'weight_mutate_power': config.genome_config.weight_mutate_power,
-            # 'weight_replace_rate': config.genome_config.weight_replace_rate,
             
             # Node bias parameters
             'bias_init_mean': config.genome_config.bias_init_mean,
@@ -261,15 +250,6 @@ def setup_results_directory(config, experiment_name='kan', seed=None, force_new=
             'aggregation_default': config.genome_config.aggregation_default,
             'aggregation_options': list(config.genome_config.aggregation_options),
             'aggregation_mutate_rate': config.genome_config.aggregation_mutate_rate,
-            
-            # Standard connection parameters
-            # 'weight_init_mean': config.genome_config.weight_init_mean,
-            # 'weight_init_stdev': config.genome_config.weight_init_stdev,
-            # 'weight_max_value': config.genome_config.weight_max_value,
-            # 'weight_min_value': config.genome_config.weight_min_value,
-            # 'weight_mutate_rate': config.genome_config.weight_mutate_rate,
-            # 'weight_mutate_power': config.genome_config.weight_mutate_power,
-            # 'weight_replace_rate': config.genome_config.weight_replace_rate,
             
             # Node bias parameters
             'bias_init_mean': config.genome_config.bias_init_mean,

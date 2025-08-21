@@ -3,7 +3,6 @@ Simplified KAN-NEAT Results Analysis Script
 Focuses on core functionality without complex dependencies.
 """
 
-import os
 import json
 import pickle
 import pandas as pd

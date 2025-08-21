@@ -4,7 +4,6 @@ Based on the special functions from the original KAN paper.
 """
 
 import numpy as np
-import torch
 from scipy import special
 from typing import Tuple, Callable
 
@@ -70,7 +69,7 @@ class SpecialFunction:
         # Check if inputs are in valid domain
         if not (self.domain_x[0] <= x <= self.domain_x[1] and 
                 self.domain_y[0] <= y <= self.domain_y[1]):
-            return 0.0  # Return 0 for out-of-domain inputs
+            return 0.0
         
         try:
             result = self.func(x, y)

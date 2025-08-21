@@ -11,10 +11,7 @@ import pickle
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
 from pathlib import Path
-import warnings
-import glob
 
 import special_functions
 import neat

@@ -9,16 +9,13 @@ import sys
 import time
 import argparse
 import subprocess
-import itertools
 import pandas as pd
-from pathlib import Path
 
 import special_functions
 import pykan_trainer
 
 # Add parent directory to path for results_manager
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
-import results_manager
 
 
 def run_neat_experiment(function_name, net_type, seed, num_generations=50, 

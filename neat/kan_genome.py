@@ -4,7 +4,6 @@ from neat.genome import DefaultGenome, DefaultGenomeConfig
 from neat.config import ConfigParameter
 from neat.genes import DefaultNodeGene, DefaultConnectionGene, BaseGene
 from neat.attributes import FloatAttribute, BoolAttribute, StringAttribute
-from neat.nn.kan import SplineFunctionImpl
 from neat.graphs import creates_cycle
 
 class KANNodeGene(DefaultNodeGene):
@@ -74,7 +73,7 @@ class KANConnectionGene(DefaultConnectionGene):
         self.enabled = enabled
         self.weight_s = weight_s
         self.weight_b = weight_b
-        self.spline_segments = {}  # Dictionary mapping segment keys to SplineSegmentGenes
+        self.spline_segments = {}
         
     def mutate(self, config):
         """Mutate this connection gene's attributes."""
@@ -300,7 +299,7 @@ class KANGenomeConfig(DefaultGenomeConfig):
             ConfigParameter('spline_range_max', float, 1.0),
             ConfigParameter('kan_segments_distance_treshold', float, 1e-3),
             ConfigParameter('kan_connection_crossover_add_segment_rate', float, 0.5),
-            ConfigParameter('kan_segment_crossover_better_fitness_rate', float, 0.75) # 75% chance to inherit from fitter parent
+            ConfigParameter('kan_segment_crossover_better_fitness_rate', float, 0.75)
         ]
         
         self._params += kan_params
@@ -619,4 +618,4 @@ class KANGenome(DefaultGenome):
     def distance(self, other, config):
         """Return the genetic distance between this genome and the other."""
         distance = super().distance(other, config)
-        return distance  # Connection distance already includes spline distance
+        return distance

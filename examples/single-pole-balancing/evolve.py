@@ -16,7 +16,6 @@ import neat
 import visualize
 import results_manager
 
-# Import KAN-specific modules conditionally
 try:
     from neat.nn.kan import KANNetwork
     from neat.kan_genome import KANGenome

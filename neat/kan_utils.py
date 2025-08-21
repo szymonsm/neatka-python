@@ -1,6 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 
 def plot_spline(connection, x_range=(-1, 1), num_points=100):
     """Plot a spline function for visualization.

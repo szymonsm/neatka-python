@@ -9,8 +9,6 @@ import traceback
 import argparse
 import random
 import numpy as np
-import time
-import gym
 
 import neat
 import lunar_lander

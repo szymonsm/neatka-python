@@ -2,7 +2,6 @@
 Special Functions experiment using either a standard feedforward neural network
 or a Kolmogorov-Arnold Network (KAN) with NEAT evolution.
 """
-import multiprocessing
 import os
 import pickle
 import time
@@ -16,7 +15,6 @@ import neat
 import visualize
 import results_manager
 
-# Import KAN-specific modules conditionally
 try:
     from neat.nn.kan import KANNetwork
     from neat.kan_genome import KANGenome
@@ -130,16 +128,13 @@ def _calculate_fitness(net, genome_key):
         
         # Cache the result
         fitness_cache[genome_key] = fitness
-
-        # print(fitness)
         
         return fitness
         
     except Exception as e:
         print(f"Error in fitness evaluation: {e}")
-        return 10000.0  # Large but bounded penalty for errors since we're minimizing
+        return 10000.0
 
-# Move GenerationReporter to module level to make it picklable
 class GenerationReporter(neat.reporting.BaseReporter):
     def __init__(self, generation_data):
         self.generation_data = generation_data
