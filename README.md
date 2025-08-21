@@ -1,45 +1,116 @@
-[![Build Status](https://app.travis-ci.com/CodeReclaimers/neat-python.svg?branch=master)](https://app.travis-ci.com/github/CodeReclaimers/neat-python)
-[![Coverage Status](https://coveralls.io/repos/CodeReclaimers/neat-python/badge.svg?branch=master&service=github)](https://coveralls.io/github/CodeReclaimers/neat-python?branch=master)
-[![Downloads](https://static.pepy.tech/personalized-badge/neat-python?period=total&units=international_system&left_color=grey&right_color=blue&left_text=Downloads)](https://pepy.tech/project/neat-python)
+# NEATKA-Python: NEAT with Kolmogorov-Arnold Networks
 
 ## About ##
 
-NEAT (NeuroEvolution of Augmenting Topologies) is a method developed by Kenneth O. Stanley for evolving arbitrary neural
-networks. This project is a pure-Python implementation of NEAT with no dependencies beyond the standard library. It was
-forked from the excellent project by @MattKallada.
+This repository presents **NEATKA** (NEAT + KAN), an innovative combination of **NEAT** (NeuroEvolution of Augmenting Topologies) and **Kolmogorov-Arnold Networks (KANs)**. This work was developed as part of the Master's thesis "Neuroevolutionary Techniques for Enhancing the Efficiency of Kolmogorov-Arnold Networks" by **Szymon Matuszewski** at **Warsaw University of Technology**.
 
-For further information regarding general concepts and theory, please see the 
-[Selected Publications](http://www.cs.ucf.edu/~kstanley/#publications) on Stanley's page at the University of Central 
-Florida (now somewhat dated), or the [publications page](https://www.kenstanley.net/papers) of his current website.
+### Background
 
-`neat-python` is licensed under the [3-clause BSD license](https://opensource.org/licenses/BSD-3-Clause).  It is
-currently only supported on Python 3.6 through 3.11, and pypy3.
+NEAT is a method developed by Kenneth O. Stanley for evolving arbitrary neural networks. This project extends the excellent `neat-python` implementation by integrating Kolmogorov-Arnold Networks, which replace traditional Multi-Layer Perceptrons' linear weights with learnable spline functions.
+
+**Key Innovation**: Instead of fixed activation functions and linear weights, KANs use learnable univariate functions (implemented as B-splines) on the edges, making them more interpretable and potentially more efficient for certain tasks.
+
+### Original NEAT-Python
+
+This work is based on the `neat-python` library, a pure-Python implementation of NEAT. The original project was created by @MattKallada and is maintained by CodeReclaimers.
+
+For information on the original NEAT algorithm and theory, see:
+- [Selected Publications](http://www.cs.ucf.edu/~kstanley/#publications) by Kenneth O. Stanley
+- [Current publications](https://www.kenstanley.net/papers) on Stanley's website
+
+## License ##
+
+This project extends `neat-python` which is licensed under the [3-clause BSD license](https://opensource.org/licenses/BSD-3-Clause). 
+
+**Copyright Notice:**
+- Original neat-python: Copyright (c) 2007-2019, CodeReclaimers, LLC and contributors
+- KAN extensions: Copyright (c) 2025, Szymon Matuszewski, Warsaw University of Technology
+
+This extended work maintains compatibility with the original BSD-3-Clause license while adding KAN-specific functionality for research purposes.
 
 ## Getting Started ##
 
-If you want to try neat-python, please check out the repository, start playing with the examples (`examples/xor` is
-a good place to start) and then try creating your own experiment.
+### Installation
 
-The documentation is available on [Read The Docs](http://neat-python.readthedocs.io).
+1. Clone this repository:
+```bash
+git clone https://github.com/szymonsm/neatka-python.git
+cd neatka-python
+```
+
+2. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+### Usage
+
+The library supports both traditional feedforward networks and the new KAN networks. Choose your network type using configuration files:
+
+- **Feedforward networks**: Use `config-feedforward` files
+- **KAN networks**: Use `config-kan` files
+
+### Examples
+
+Three comprehensive examples are provided:
+
+1. **`examples/lunar-lander/`** - OpenAI Gym LunarLander-v2 control task
+2. **`examples/single-pole-balancing/`** - Classic cart-pole balancing problem  
+3. **`examples/special-functions/`** - Mathematical function approximation
+
+Each example includes:
+- `evolve.py` - Run evolution with either network type
+- `test.py` - Test and visualize best evolved solutions
+- `parameters_sweep.py` - Systematic hyperparameter exploration
+
+### Key Features
+
+- **Dual Network Support**: Seamlessly switch between feedforward and KAN architectures
+- **B-spline Connections**: Learnable spline functions replace traditional linear connections in KANs
+- **Evolutionary Spline Optimization**: Spline control points evolve through mutation and crossover
+- **Comprehensive Examples**: Real-world applications demonstrating both network types
+- **Visualization Tools**: Built-in plotting and network visualization capabilities
+
+## Technical Innovation ##
+
+The core innovation lies in the `neat/kan_genome.py` module, which implements:
+
+- **KANConnectionGene**: Connections with learnable B-spline functions instead of scalar weights
+- **SplineSegmentGene**: Individual control points that define the spline curves
+- **Evolutionary Operators**: Specialized mutation and crossover for spline-based connections
+- **Dynamic Spline Structure**: Ability to add/remove spline control points during evolution
 
 ## Citing ##
 
-Here are APA and Bibtex entries you can use to cite this project in a publication. The listed authors are the originators
-and/or maintainers of all iterations of the project up to this point.  If you have contributed and would like your name added 
-to the citation, please submit an issue or email alan@codereclaimers.com.
+If you use this work, please cite both the original neat-python library and this KAN extension:
 
-APA
+### This Work (NEATKA)
+```
+@mastersthesis{Matuszewski2025NEATKA,
+    author = {Matuszewski, Szymon},
+    title = {Neuroevolutionary Techniques for Enhancing the Efficiency of Kolmogorov-Arnold Networks},
+    school = {Warsaw University of Technology},
+    year = {2025}
+}
+```
+
+### Original NEAT-Python
+**APA:**
 ```
 McIntyre, A., Kallada, M., Miguel, C. G., Feher de Silva, C., & Netto, M. L. neat-python [Computer software]
 ```
 
-Bibtex
+**Bibtex:**
 ```
 @software{McIntyre_neat-python,
-author = {McIntyre, Alan and Kallada, Matt and Miguel, Cesar G. and Feher de Silva, Carolina and Netto, Marcio Lobo},
-title = {{neat-python}}
+    author = {McIntyre, Alan and Kallada, Matt and Miguel, Cesar G. and Feher de Silva, Carolina and Netto, Marcio Lobo},
+    title = {{neat-python}}
 }
 ```
 
-## Thank you! ##
-Many thanks to the folks who have [cited this repository](https://scholar.google.com/scholar?start=0&hl=en&as_sdt=5,34&sciodt=0,34&cites=15315010889003730796&scipsc=) in their own work. 
+## Acknowledgments ##
+
+This work builds upon the excellent `neat-python` library by CodeReclaimers, LLC. Special thanks to the original authors and maintainers for providing a solid foundation for this research.
+
+**Master's Thesis Supervision**: Warsaw University of Technology  
+**Author**: Szymon Matuszewski 
